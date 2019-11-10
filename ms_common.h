@@ -19,7 +19,12 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
-static const f32 ERR = 1e-5f;
+static const f32 ERR = 1e-3f;
+
+struct ms_gl_bufs {
+    u32 VAO;
+    u32 VBO;
+};
 
 struct ms_m4 {
     f32 data[4][4];

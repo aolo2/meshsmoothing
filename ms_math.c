@@ -74,16 +74,14 @@ ms_math_translate(f32 x, f32 y, f32 z)
 }
 
 static struct ms_m4
-ms_math_projection(f32 aspect, f32 fov_deg, f32 p_near, f32 p_far)
+ms_math_ortho(f32 left, f32 right, f32 top, f32 bottom, f32 near, f32 far)
 {
-    f32 tan_fov_2 = tanf(fov_deg / 2.0f);
-    
     struct ms_m4 result = {
         .data = {
-            { 1.0f / (aspect * tan_fov_2), 0.0f,             0.0f,                                0.0f },
-            { 0.0f,                        1.0f / tan_fov_2, 0.0f,                                0.0f },
-            { 0.0f,                        0.0f,             (p_far + p_near) / (p_near - p_far), (2.0f * p_far * p_near) / (p_near - p_far) },
-            { 0.0f,                        0.0f,            -1.0f,                                1.0f }
+            { 2.0f / (right - left), 0.0f,                  0.0f,                (right + left) / (left - right) },
+            { 0.0f,                  2.0f / (top - bottom), 0.0f,                (top + bottom) / (bottom - top) },
+            { 0.0f,                  0.0f,                  2.0f / (near - far), (far + near) / (near - far) },
+            { 0.0f,                  0.0f,                  0.0f,                1.0f }
         }
     };
     
@@ -105,6 +103,22 @@ ms_math_rot(f32 x, f32 y, f32 z, f32 angle_rad)
             { 0.0f,                               0.0f,                               0.0f,                               1.0f }
         }
     };
+    
+    return(result);
+}
+
+static struct ms_m4
+ms_math_mm(struct ms_m4 A, struct ms_m4 B)
+{
+    struct ms_m4 result = { 0 };
+    
+    for (u32 y = 0; y < 4; ++y) {
+        for (u32 x = 0; x < 4; ++x) {
+            for (u32 i = 0; i < 4; ++i) {
+                result.data[y][x] += A.data[y][i] * B.data[i][x];
+            }
+        }
+    }
     
     return(result);
 }

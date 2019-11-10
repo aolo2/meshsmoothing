@@ -7,7 +7,7 @@ static const char *vs_source = "#version 330 core\n"
 "uniform mat4 proj;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = proj * model * vec4(pos.x, pos.y, pos.z - 2.0f, 1.0);\n"
+"   gl_Position = proj * model * vec4(pos.x, pos.y, pos.z, 1.0);\n"
 "}";
 
 static const char *fs_source = "#version 330 core\n"
@@ -42,16 +42,16 @@ ms_opengl_init(u32 width, u32 height)
     return(window);
 }
 
-static GLuint
+static struct ms_gl_bufs
 ms_opengl_init_buffers(struct ms_mesh mesh)
 {
-    GLuint VAO, VBO;
+    struct ms_gl_bufs result;
     
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &result.VAO);
+    glGenBuffers(1, &result.VBO);
     
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindVertexArray(result.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, result.VBO);
     
     glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.degree * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
     
@@ -61,7 +61,19 @@ ms_opengl_init_buffers(struct ms_mesh mesh)
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
     
-    return(VAO);
+    return(result);
+}
+
+static void
+ms_opengl_update_buffers(struct ms_gl_bufs bufs, struct ms_mesh mesh)
+{
+    glBindVertexArray(bufs.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, bufs.VBO);
+    
+    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.degree * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), NULL);
+    glEnableVertexAttribArray(0);
 }
 
 static void

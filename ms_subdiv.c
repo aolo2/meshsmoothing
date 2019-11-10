@@ -17,7 +17,7 @@ _verts_equal(struct ms_v3 a, struct ms_v3 b)
 }
 
 static u32
-_edge_adjacent_triangle(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v3 end)
+_edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v3 end)
 {
     for (u32 face = 0; face < mesh.primitives; ++face) {
         if (face == me) {
@@ -123,7 +123,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             struct ms_v3 start = mesh.vertices[face * mesh.degree + vert];
             struct ms_v3 end = mesh.vertices[face * mesh.degree + next_vert];
             
-            u32 adj = _edge_adjacent_triangle(mesh, face, start, end);
+            u32 adj = _edge_adjacent_face(mesh, face, start, end);
             
             struct ms_v3 adj_center = ms_math_avg(face_points[face], face_points[adj]);
             struct ms_v3 edge_center = ms_math_avg(start, end);
@@ -264,8 +264,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
     free(edge_points);
     
     new_mesh.degree = 4;
-    
-    printf("[INFO] Finished Catmull-Clark step\n");
+    new_mesh.normals = NULL;
     
     return(new_mesh);
 }
