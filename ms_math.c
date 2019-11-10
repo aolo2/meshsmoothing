@@ -1,3 +1,33 @@
+static struct ms_v3
+ms_math_avg(struct ms_v3 a, struct ms_v3 b)
+{
+    struct ms_v3 result;
+    
+    result.x = (a.x + b.x) / 2.0f;
+    result.y = (a.y + b.y) / 2.0f;
+    result.z = (a.z + b.z) / 2.0f;
+    
+    return(result);
+}
+
+static struct ms_v3
+ms_math_navg(struct ms_v3 *verts, u32 count)
+{
+    struct ms_v3 result = { 0 };
+    
+    for (u32 i = 0; i < count; ++i) {
+        result.x += verts[i].x;
+        result.y += verts[i].y;
+        result.z += verts[i].z;
+    }
+    
+    result.x /= (f32) count;
+    result.y /= (f32) count;
+    result.z /= (f32) count;
+    
+    return(result);
+}
+
 static struct ms_m4
 ms_math_unitm4()
 {
@@ -29,6 +59,21 @@ ms_math_scale(f32 scale)
 }
 
 static struct ms_m4
+ms_math_translate(f32 x, f32 y, f32 z)
+{
+    struct ms_m4 result = {
+        .data = {
+            { 1.0f, 0.0f, 0.0f, x },
+            { 0.0f, 1.0f, 0.0f, y },
+            { 0.0f, 0.0f, 1.0f, z },
+            { 0.0f, 0.0f, 0.0f, 1.0f }
+        }
+    };
+    
+    return(result);
+}
+
+static struct ms_m4
 ms_math_projection(f32 aspect, f32 fov_deg, f32 p_near, f32 p_far)
 {
     f32 tan_fov_2 = tanf(fov_deg / 2.0f);
@@ -47,14 +92,10 @@ ms_math_projection(f32 aspect, f32 fov_deg, f32 p_near, f32 p_far)
 
 
 static struct ms_m4
-ms_math_rot(struct ms_v3 unit_axis, f32 angle_rad)
+ms_math_rot(f32 x, f32 y, f32 z, f32 angle_rad)
 {
     f32 cos_t = cosf(angle_rad);
     f32 sin_t = sinf(angle_rad);
-    
-    f32 x = unit_axis.data[0];
-    f32 y = unit_axis.data[1];
-    f32 z = unit_axis.data[2];
     
     struct ms_m4 result = {
         .data = {

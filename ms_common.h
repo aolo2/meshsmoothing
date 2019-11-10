@@ -1,9 +1,10 @@
-#include <stdint.h> /* for fixed-size types */
-#include <stdlib.h> /* for malloc/free */
-#include <stdio.h>  /* for fopen/fread/fclose */
-#include <assert.h> /* for assert */
-#include <string.h> /* for memset */
-#include <math.h>   /* for sinf, cosf, tanf */
+#include <stdint.h>  /* for fixed-size types */
+#include <stdlib.h>  /* for malloc/free */
+#include <stdio.h>   /* for fopen/fread/fclose */
+#include <stdbool.h> /* for bool, true, false */
+#include <string.h>  /* for memset */
+#include <assert.h>  /* for assert */
+#include <math.h>    /* for sinf, cosf, tanf */
 
 typedef int64_t s64;
 typedef int32_t s32;
@@ -18,16 +19,22 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
-struct ms_mesh {
-    u32 triangles;
-    f32 *vertices;
-    f32 *normals;
-};
-
-struct ms_v3 {
-    f32 data[3];
-};
+static const f32 ERR = 1e-5f;
 
 struct ms_m4 {
     f32 data[4][4];
+};
+
+#pragma pack(push, 4)
+struct ms_v3 {
+    f32 x;
+    f32 y;
+    f32 z;
+};
+#pragma pack(pop)
+
+struct ms_mesh {
+    u32 triangles;
+    struct ms_v3 *vertices;
+    struct ms_v3 *normals;
 };

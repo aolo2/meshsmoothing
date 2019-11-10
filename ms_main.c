@@ -3,11 +3,16 @@
 #include "ms_stl.c"
 #include "ms_opengl.c"
 #include "ms_math.c"
+#include "ms_subdiv.c"
 
 s32
 main(void)
 {
-    struct ms_mesh mesh = ms_stl_read_file("res/torus.stl");
+    struct ms_mesh mesh = ms_stl_read_file("res/icosphere.stl");
+    struct ms_mesh subdiv = ms_subdiv_catmull_clark(mesh);
+    
+    (void) subdiv;
+    
     GLFWwindow *window = ms_opengl_init(1280, 720);
     
     assert(window);
@@ -22,7 +27,9 @@ main(void)
     struct ms_m4 proj = ms_math_projection(1280.0f / 720.0f, M_PI / 2.0f, 0.1f, 100.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_FALSE, (float *) proj.data);
     
-    struct ms_m4 model = ms_math_scale(0.5f);
+    struct ms_m4 scale = ms_math_scale(0.5f);
+    //struct ms_m4 translate = ms_math_translate(0.0f, 0.0f, 0.0f);
+    struct ms_m4 model = scale;
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, (float *) model.data);
     
     while (!glfwWindowShouldClose(window)) {
