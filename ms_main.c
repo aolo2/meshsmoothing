@@ -8,7 +8,7 @@
 s32
 main(void)
 {
-    struct ms_mesh mesh = ms_stl_read_file("res/icosphere.stl");
+    struct ms_mesh mesh = ms_stl_read_file("res/cube.stl");
     struct ms_mesh subdiv = ms_subdiv_catmull_clark(mesh);
     
     (void) subdiv;
@@ -17,11 +17,13 @@ main(void)
     
     assert(window);
     
-    u32 VAO = ms_opengl_init_buffers(mesh);
+    u32 VAO = ms_opengl_init_buffers(subdiv);
     s32 shader_program = ms_opengl_init_shader_program();
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glUseProgram(shader_program);
+    glLineWidth(2.0f);
+    glPointSize(2.0f);
     glBindVertexArray(VAO);
     
     struct ms_m4 proj = ms_math_projection(1280.0f / 720.0f, M_PI / 2.0f, 0.1f, 100.0f);
@@ -36,7 +38,7 @@ main(void)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        glDrawArrays(GL_TRIANGLES, 0, mesh.triangles * 3);
+        glDrawArrays(GL_LINES, 0, subdiv.primitives * 4);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

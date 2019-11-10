@@ -34,7 +34,8 @@ struct ms_v3 {
 #pragma pack(pop)
 
 struct ms_mesh {
-    u32 triangles;
+    u8 vert_per_face;
+    u32 primitives;
     struct ms_v3 *vertices;
     struct ms_v3 *normals;
 };

@@ -3,12 +3,11 @@
 
 static const char *vs_source = "#version 330 core\n"
 "layout (location = 0) in vec3 pos;\n"
-"layout (location = 1) in vec3 normal;\n"
 "uniform mat4 model;\n"
 "uniform mat4 proj;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = proj * model * vec4(pos, 1.0);\n"
+"   gl_Position = proj * model * vec4(pos.x, pos.y, pos.z - 2.0f, 1.0);\n"
 "}";
 
 static const char *fs_source = "#version 330 core\n"
@@ -54,23 +53,10 @@ ms_opengl_init_buffers(struct ms_mesh mesh)
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     
-    glBufferData(GL_ARRAY_BUFFER, mesh.triangles * 12 * sizeof(f32), NULL, GL_STATIC_DRAW);
-    
-    glBufferSubData(GL_ARRAY_BUFFER,
-                    0,
-                    mesh.triangles * 9 * sizeof(f32),
-                    mesh.vertices);
-    
-    glBufferSubData(GL_ARRAY_BUFFER,
-                    mesh.triangles * 9 * sizeof(f32), 
-                    mesh.triangles * 3 * sizeof(f32),
-                    mesh.normals);
+    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.vert_per_face * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), NULL);
     glEnableVertexAttribArray(0);
-    
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), (void *) (mesh.triangles * 9 * sizeof(f32)));
-    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
