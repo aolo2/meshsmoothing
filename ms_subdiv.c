@@ -27,8 +27,8 @@ _edge_adjacent_triangle(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct 
         bool found_start = false;
         bool found_end = false;
         
-        for (u32 vert = 0; vert < 3; ++vert) {
-            struct ms_v3 vertex = mesh.vertices[face * 3 + vert];
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            struct ms_v3 vertex = mesh.vertices[face * mesh.degree + vert];
             
             if (_verts_equal(vertex, start)) {
                 found_start = true;
@@ -49,13 +49,13 @@ _edge_adjacent_triangle(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct 
 }
 
 static u32
-_vert_adjacent_triangles(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
+_vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
 {
     u32 tr_count = 0;
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
-        for (u32 vert = 0; vert < 3; ++vert) {
-            struct ms_v3 vertex = mesh.vertices[face * 3 + vert];
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            struct ms_v3 vertex = mesh.vertices[face * mesh.degree + vert];
             
             if (_verts_equal(point, vertex)) {
                 if (dest != NULL) {
@@ -75,14 +75,14 @@ _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
     u32 edge_count = 0;
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
-        for (u32 vert = 0; vert < 3; ++vert) {
-            u32 next_vert = (vert + 1) % 3;
-            struct ms_v3 start = mesh.vertices[face * 3 + vert];
-            struct ms_v3 end = mesh.vertices[face * 3 + next_vert];
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            u32 next_vert = (vert + 1) % mesh.degree;
+            struct ms_v3 start = mesh.vertices[face * mesh.degree + vert];
+            struct ms_v3 end = mesh.vertices[face * mesh.degree + next_vert];
             
             if (_verts_equal(point, start) || _verts_equal(point, end)) {
                 if (dest != NULL) {
-                    dest[edge_count] = face * 3 + vert;
+                    dest[edge_count] = face * mesh.degree + vert;
                 }
                 ++edge_count;
             }
@@ -101,28 +101,27 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
     for (u32 face = 0; face < mesh.primitives; ++face) {
         struct ms_v3 fp = { 0 };
         
-        for (u32 vert = 0; vert < 3; ++vert) {
-            fp.x += mesh.vertices[face * 3 + vert].x;
-            fp.y += mesh.vertices[face * 3 + vert].y;
-            fp.z += mesh.vertices[face * 3 + vert].z;
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            fp.x += mesh.vertices[face * mesh.degree + vert].x;
+            fp.y += mesh.vertices[face * mesh.degree + vert].y;
+            fp.z += mesh.vertices[face * mesh.degree + vert].z;
         }
         
-        fp.x /= 3.0f;
-        fp.y /= 3.0f;
-        fp.z /= 3.0f;
+        fp.x /= (f32) mesh.degree;
+        fp.y /= (f32) mesh.degree;
+        fp.z /= (f32) mesh.degree;
         
         face_points[face] = fp;
     }
     
     /* Edge points */
-    /* TODO: quads! */
-    struct ms_v3 *edge_points = malloc(mesh.primitives * 3 * sizeof(struct ms_v3));
+    struct ms_v3 *edge_points = malloc(mesh.primitives * mesh.degree * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
-        for (u32 vert = 0; vert < 3; ++vert) {
-            u32 next_vert = (vert + 1) % 3;
-            struct ms_v3 start = mesh.vertices[face * 3 + vert];
-            struct ms_v3 end = mesh.vertices[face * 3 + next_vert];
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            u32 next_vert = (vert + 1) % mesh.degree;
+            struct ms_v3 start = mesh.vertices[face * mesh.degree + vert];
+            struct ms_v3 end = mesh.vertices[face * mesh.degree + next_vert];
             
             u32 adj = _edge_adjacent_triangle(mesh, face, start, end);
             
@@ -130,21 +129,21 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             struct ms_v3 edge_center = ms_math_avg(start, end);
             struct ms_v3 face_center = ms_math_avg(adj_center, edge_center);
             
-            edge_points[face * 3 + vert] = ms_math_avg(edge_center, face_center);
+            edge_points[face * mesh.degree + vert] = ms_math_avg(edge_center, face_center);
         }
     }
     
     /* Update points */
-    struct ms_v3 *new_verts = malloc(mesh.primitives * 3 * sizeof(struct ms_v3));
+    struct ms_v3 *new_verts = malloc(mesh.primitives * mesh.degree * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
-        for (u32 vert = 0; vert < 3; ++vert) {
-            struct ms_v3 old_vert = mesh.vertices[face * 3 + vert];
+        for (u32 vert = 0; vert < mesh.degree; ++vert) {
+            struct ms_v3 old_vert = mesh.vertices[face * mesh.degree + vert];
             
             /* Average of face points of all the faces this vertex is adjacent to */
-            u32 nadj_faces = _vert_adjacent_triangles(mesh, old_vert, NULL);
+            u32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, NULL);
             u32 *adj_faces = malloc(nadj_faces * sizeof(u32));
-            _vert_adjacent_triangles(mesh, old_vert, adj_faces);
+            _vert_adjacent_faces(mesh, old_vert, adj_faces);
             
             struct ms_v3 avg_face_point = { 0 };
             for (u32 i = 0; i < nadj_faces; ++i) {
@@ -182,49 +181,89 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_edge_point.y;
             new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_edge_point.z;
             
-            new_verts[face * 3 + vert] = new_vert;
+            new_verts[face * mesh.degree + vert] = new_vert;
         }
     }
     
     /* Subdivide */
     struct ms_mesh new_mesh;
-    new_mesh.primitives = mesh.primitives * 3;
-    new_mesh.vertices = malloc(mesh.primitives * 3 * 4 * sizeof(struct ms_v3));
+    new_mesh.primitives = mesh.primitives * mesh.degree;
+    new_mesh.vertices = malloc(new_mesh.primitives * 4 * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
-        struct ms_v3 edge_point_ab = edge_points[face * 3 + 0];
-        struct ms_v3 edge_point_bc = edge_points[face * 3 + 1];
-        struct ms_v3 edge_point_ca = edge_points[face * 3 + 2];
+        struct ms_v3 edge_point_ab = edge_points[face * mesh.degree + 0];
+        struct ms_v3 edge_point_bc = edge_points[face * mesh.degree + 1];
+        struct ms_v3 edge_point_ca = edge_points[face * mesh.degree + 2];
         struct ms_v3 face_point_abc = face_points[face];
         
-        struct ms_v3 a = new_verts[face * 3 + 0];
-        struct ms_v3 b = new_verts[face * 3 + 1];
-        struct ms_v3 c = new_verts[face * 3 + 2];
+        struct ms_v3 a = new_verts[face * mesh.degree + 0];
+        struct ms_v3 b = new_verts[face * mesh.degree + 1];
+        struct ms_v3 c = new_verts[face * mesh.degree + 2];
         
-        /* face 0 */
-        new_mesh.vertices[face * 12 + 0] = a;
-        new_mesh.vertices[face * 12 + 1] = edge_point_ab;
-        new_mesh.vertices[face * 12 + 2] = face_point_abc;
-        new_mesh.vertices[face * 12 + 3] = edge_point_ca;
-        
-        /* face 1 */
-        new_mesh.vertices[face * 12 + 4] = b;
-        new_mesh.vertices[face * 12 + 5] = edge_point_bc;
-        new_mesh.vertices[face * 12 + 6] = face_point_abc;
-        new_mesh.vertices[face * 12 + 7] = edge_point_ab;
-        
-        /* face 2 */
-        new_mesh.vertices[face * 12 + 8] = c;
-        new_mesh.vertices[face * 12 + 9] = edge_point_ca;
-        new_mesh.vertices[face * 12 + 10] = face_point_abc;
-        new_mesh.vertices[face * 12 + 11] = edge_point_bc;
+        /* First iteration of Catmull-Clark */
+        if (mesh.degree == 3) {
+            /* face 0 */
+            new_mesh.vertices[face * 12 + 0] = a;
+            new_mesh.vertices[face * 12 + 1] = edge_point_ab;
+            new_mesh.vertices[face * 12 + 2] = face_point_abc;
+            new_mesh.vertices[face * 12 + 3] = edge_point_ca;
+            
+            /* face 1 */
+            new_mesh.vertices[face * 12 + 4] = b;
+            new_mesh.vertices[face * 12 + 5] = edge_point_bc;
+            new_mesh.vertices[face * 12 + 6] = face_point_abc;
+            new_mesh.vertices[face * 12 + 7] = edge_point_ab;
+            
+            /* face 2 */
+            new_mesh.vertices[face * 12 + 8] = c;
+            new_mesh.vertices[face * 12 + 9] = edge_point_ca;
+            new_mesh.vertices[face * 12 + 10] = face_point_abc;
+            new_mesh.vertices[face * 12 + 11] = edge_point_bc;
+        } else {
+            /* All the following iterations of Catmull-Clark  */
+            struct ms_v3 edge_point_cd = edge_point_ca;
+            struct ms_v3 edge_point_da = edge_points[face * mesh.degree + 3];
+            struct ms_v3 face_point_abcd = face_point_abc;
+            struct ms_v3 d = new_verts[face * mesh.degree + 3];
+            
+            /*
+            (a, edge_pointab, face_pointabcd, edge_pointda)
+                (b, edge_pointbc, face_pointabcd, edge_pointab)
+                (c, edge_pointcd, face_pointabcd, edge_pointbc)
+                (d, edge_pointda, face_pointabcd, edge_pointcd)
+            */
+            
+            /* face 0 */
+            new_mesh.vertices[face * 16 + 0] = a;
+            new_mesh.vertices[face * 16 + 1] = edge_point_ab;
+            new_mesh.vertices[face * 16 + 2] = face_point_abcd;
+            new_mesh.vertices[face * 16 + 3] = edge_point_da;
+            
+            /* face 1 */
+            new_mesh.vertices[face * 16 + 4] = b;
+            new_mesh.vertices[face * 16 + 5] = edge_point_bc;
+            new_mesh.vertices[face * 16 + 6] = face_point_abcd;
+            new_mesh.vertices[face * 16 + 7] = edge_point_ab;
+            
+            /* face 2 */
+            new_mesh.vertices[face * 16 + 8] = c;
+            new_mesh.vertices[face * 16 + 9] = edge_point_cd;
+            new_mesh.vertices[face * 16 + 10] = face_point_abcd;
+            new_mesh.vertices[face * 16 + 11] = edge_point_bc;
+            
+            /* face 3 */
+            new_mesh.vertices[face * 16 + 12] = d;
+            new_mesh.vertices[face * 16 + 13] = edge_point_da;
+            new_mesh.vertices[face * 16 + 14] = face_point_abcd;
+            new_mesh.vertices[face * 16 + 15] = edge_point_cd;
+        }
     }
     
     free(new_verts);
     free(face_points);
     free(edge_points);
     
-    new_mesh.vert_per_face = 4;
+    new_mesh.degree = 4;
     
     printf("[INFO] Finished Catmull-Clark step\n");
     

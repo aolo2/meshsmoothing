@@ -34,7 +34,7 @@ struct ms_v3 {
 #pragma pack(pop)
 
 struct ms_mesh {
-    u8 vert_per_face;
+    u8 degree;
     u32 primitives;
     struct ms_v3 *vertices;
     struct ms_v3 *normals;

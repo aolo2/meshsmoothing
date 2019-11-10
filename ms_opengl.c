@@ -53,7 +53,7 @@ ms_opengl_init_buffers(struct ms_mesh mesh)
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     
-    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.vert_per_face * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.degree * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), NULL);
     glEnableVertexAttribArray(0);
