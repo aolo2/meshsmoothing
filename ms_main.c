@@ -51,7 +51,7 @@ main(s32 argc, char *argv[])
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glUseProgram(shader_program);
-    glLineWidth(2.0f);
+    //    glLineWidth(2.0f);
     glPointSize(2.0f);
     glBindVertexArray(bufs.VAO);
     

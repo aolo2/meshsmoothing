@@ -170,6 +170,9 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             avg_edge_point.y /= (f32) nadj_edges;
             avg_edge_point.z /= (f32) nadj_edges;
             
+            free(adj_faces);
+            free(adj_edges);
+            
             /* Weights */
             f32 w1 = (f32) (nadj_faces - 3) / (f32) nadj_faces;
             f32 w2 = 1.0f / (f32) nadj_faces;
@@ -225,13 +228,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             struct ms_v3 edge_point_da = edge_points[face * mesh.degree + 3];
             struct ms_v3 face_point_abcd = face_point_abc;
             struct ms_v3 d = new_verts[face * mesh.degree + 3];
-            
-            /*
-            (a, edge_pointab, face_pointabcd, edge_pointda)
-                (b, edge_pointbc, face_pointabcd, edge_pointab)
-                (c, edge_pointcd, face_pointabcd, edge_pointbc)
-                (d, edge_pointda, face_pointabcd, edge_pointcd)
-            */
             
             /* face 0 */
             new_mesh.vertices[face * 16 + 0] = a;
