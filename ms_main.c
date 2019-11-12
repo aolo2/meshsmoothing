@@ -6,9 +6,9 @@
 #include "ms_subdiv.c"
 
 static bool ms_update_mesh = false;
-static bool ms_save_mesh = false;
-static bool ms_dec_scale = false;
-static bool ms_inc_scale = false;
+static bool ms_save_mesh   = false;
+static bool ms_dec_scale   = false;
+static bool ms_inc_scale   = false;
 
 static void
 key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -39,7 +39,42 @@ main(s32 argc, char *argv[])
     printf("\t Subdivide: ENTER\n");
     printf("\t Save to disk (interactive): SPACE\n");
     
-    struct ms_mesh mesh = ms_stl_read_file(argv[1]);
+    //struct ms_mesh mesh = ms_stl_read_file(argv[1]);
+    struct ms_mesh mesh = {
+        .primitives = 6,
+        .degree = 4,
+        .vertices = malloc(6 * 4 * sizeof(struct ms_v3))
+    };
+    
+    mesh.vertices[0] = (struct ms_v3) { -1, -1, -1 };
+    mesh.vertices[1] = (struct ms_v3) { -1, -1,  1 };
+    mesh.vertices[2] = (struct ms_v3) { -1,  1,  1 };
+    mesh.vertices[3] = (struct ms_v3) { -1,  1, -1 };
+    
+    mesh.vertices[4] = (struct ms_v3) { 1, -1, -1 };
+    mesh.vertices[5] = (struct ms_v3) { 1,  1, -1 };
+    mesh.vertices[6] = (struct ms_v3) { 1,  1,  1 };
+    mesh.vertices[7] = (struct ms_v3) { 1, -1,  1 };
+    
+    mesh.vertices[8] =  (struct ms_v3) { -1, -1, -1 };
+    mesh.vertices[9] =  (struct ms_v3) {  1, -1, -1 };
+    mesh.vertices[10] = (struct ms_v3) {  1, -1,  1 };
+    mesh.vertices[11] = (struct ms_v3) { -1, -1,  1 };
+    
+    mesh.vertices[12] = (struct ms_v3) { -1, 1, -1 };
+    mesh.vertices[13] = (struct ms_v3) { -1, 1,  1 };
+    mesh.vertices[14] = (struct ms_v3) {  1, 1,  1 };
+    mesh.vertices[15] = (struct ms_v3) {  1, 1, -1 };
+    
+    mesh.vertices[16] = (struct ms_v3) { -1, -1, -1 };
+    mesh.vertices[17] = (struct ms_v3) { -1,  1, -1 };
+    mesh.vertices[18] = (struct ms_v3) {  1,  1, -1 };
+    mesh.vertices[19] = (struct ms_v3) {  1, -1, -1 };
+    
+    mesh.vertices[20] = (struct ms_v3) { -1, -1, 1 };
+    mesh.vertices[21] = (struct ms_v3) {  1, -1, 1 };
+    mesh.vertices[22] = (struct ms_v3) {  1,  1, 1 };
+    mesh.vertices[23] = (struct ms_v3) { -1,  1, 1 };
     
     GLFWwindow *window = ms_opengl_init(1280, 720);
     glfwSetKeyCallback(window, key_callback);
@@ -49,9 +84,11 @@ main(s32 argc, char *argv[])
     struct ms_gl_bufs bufs = ms_opengl_init_buffers(mesh);
     s32 shader_program = ms_opengl_init_shader_program();
     
+    glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glUseProgram(shader_program);
     //    glLineWidth(2.0f);
+    glCullFace(GL_FRONT);
     glPointSize(2.0f);
     glBindVertexArray(bufs.VAO);
     
@@ -72,7 +109,7 @@ main(s32 argc, char *argv[])
             free(mesh.normals);
             mesh = new_mesh;
             ms_opengl_update_buffers(bufs, mesh);
-            printf("[INFO] Finished Catmull-Clark step %d\n", ++cc_step);
+            printf("[INFO] Finished Catmull-Clark [%d]\n", ++cc_step);
             ms_update_mesh = false;
         }
         
@@ -102,7 +139,11 @@ main(s32 argc, char *argv[])
         
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, (float *) model.data);
         
-        glDrawArrays(GL_TRIANGLES, 0, mesh.primitives * mesh.degree);
+        if (mesh.degree == 3) {
+            glDrawArrays(GL_TRIANGLES, 0, mesh.primitives * 3);
+        } else {
+            glDrawArrays(GL_TRIANGLES, 0, mesh.primitives * 6);
+        }
         
         ++frame;
         

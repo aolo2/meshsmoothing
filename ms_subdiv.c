@@ -70,7 +70,7 @@ _vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
 }
 
 static u32
-_vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
+_vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 *dest)
 {
     u32 edge_count = 0;
     
@@ -82,7 +82,8 @@ _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
             
             if (_verts_equal(point, start) || _verts_equal(point, end)) {
                 if (dest != NULL) {
-                    dest[edge_count] = face * mesh.degree + vert;
+                    dest[2 * edge_count + 0] = start;
+                    dest[2 * edge_count + 1] = end;
                 }
                 ++edge_count;
             }
@@ -125,11 +126,10 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             
             u32 adj = _edge_adjacent_face(mesh, face, start, end);
             
-            struct ms_v3 adj_center = ms_math_avg(face_points[face], face_points[adj]);
-            struct ms_v3 edge_center = ms_math_avg(start, end);
-            struct ms_v3 face_center = ms_math_avg(adj_center, edge_center);
+            struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
+            struct ms_v3 edge_avg = ms_math_avg(start, end);
             
-            edge_points[face * mesh.degree + vert] = ms_math_avg(edge_center, face_center);
+            edge_points[face * mesh.degree + vert] = ms_math_avg(face_avg, edge_avg);
         }
     }
     
@@ -155,20 +155,23 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             avg_face_point.y /= (f32) nadj_faces;
             avg_face_point.z /= (f32) nadj_faces;
             
-            /* Average of edge points of all the edges this vertex is adjacent to */
+            /* Average of mid points of all the edges this vertex is adjacent to */
             u32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, NULL);
-            u32 *adj_edges = malloc(nadj_edges * sizeof(u32));
+            struct ms_v3 *adj_edges = malloc(nadj_edges * 2 * sizeof(struct ms_v3));
             _vert_adjacent_edges(mesh, old_vert, adj_edges);
             
-            struct ms_v3 avg_edge_point = { 0 };
+            struct ms_v3 avg_mid_edge_point = { 0 };
             for (u32 i = 0; i < nadj_edges; ++i) {
-                avg_edge_point.x += edge_points[adj_edges[i]].x;
-                avg_edge_point.y += edge_points[adj_edges[i]].y;
-                avg_edge_point.z += edge_points[adj_edges[i]].z;
+                struct ms_v3 start = adj_edges[2 * i + 0];
+                struct ms_v3 end = adj_edges[2 * i + 1];
+                struct ms_v3 mid = ms_math_avg(start, end);
+                avg_mid_edge_point.x += mid.x;
+                avg_mid_edge_point.y += mid.y;
+                avg_mid_edge_point.z += mid.z;
             }
-            avg_edge_point.x /= (f32) nadj_edges;
-            avg_edge_point.y /= (f32) nadj_edges;
-            avg_edge_point.z /= (f32) nadj_edges;
+            avg_mid_edge_point.x /= (f32) nadj_edges;
+            avg_mid_edge_point.y /= (f32) nadj_edges;
+            avg_mid_edge_point.z /= (f32) nadj_edges;
             
             free(adj_faces);
             free(adj_edges);
@@ -180,9 +183,9 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             
             /* Weighted average to obtain a new vertex */
             struct ms_v3 new_vert;
-            new_vert.x = w1 * old_vert.x + w2 * avg_face_point.x + w3 * avg_edge_point.x;
-            new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_edge_point.y;
-            new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_edge_point.z;
+            new_vert.x = w1 * old_vert.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
+            new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
+            new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
             
             new_verts[face * mesh.degree + vert] = new_vert;
         }

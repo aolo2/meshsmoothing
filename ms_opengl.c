@@ -18,6 +18,29 @@ static const char *fs_source = "#version 330 core\n"
 "}\n";
 
 
+static struct ms_v3 *
+_quad_to_triangle(struct ms_mesh mesh, u32 *mesh_bytes)
+{
+    struct ms_v3 *triangle_verts = malloc(mesh.primitives * 6 * sizeof(struct ms_v3));
+    *mesh_bytes = mesh.primitives * 6 * 3 * sizeof(f32);
+    
+    for (u32 face = 0; face < mesh.primitives; ++face) {
+        /* ABCD quad -> two triangles ABC and CDA */
+        
+        /* ABC */
+        triangle_verts[face * 6 + 0] = mesh.vertices[face * 4 + 0];
+        triangle_verts[face * 6 + 1] = mesh.vertices[face * 4 + 1];
+        triangle_verts[face * 6 + 2] = mesh.vertices[face * 4 + 2];
+        
+        /* CDA */
+        triangle_verts[face * 6 + 3] = mesh.vertices[face * 4 + 2];
+        triangle_verts[face * 6 + 4] = mesh.vertices[face * 4 + 3];
+        triangle_verts[face * 6 + 5] = mesh.vertices[face * 4 + 0];
+    }
+    
+    return(triangle_verts);
+}
+
 static GLFWwindow *
 ms_opengl_init(u32 width, u32 height)
 {
@@ -53,7 +76,14 @@ ms_opengl_init_buffers(struct ms_mesh mesh)
     glBindVertexArray(result.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, result.VBO);
     
-    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.degree * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
+    struct ms_v3 *triangle_verts = mesh.vertices;
+    u32 mesh_bytes = mesh.primitives * 3 * 3 * sizeof(f32);
+    
+    if (mesh.degree == 4) {
+        triangle_verts = _quad_to_triangle(mesh, &mesh_bytes);
+    }
+    
+    glBufferData(GL_ARRAY_BUFFER, mesh_bytes, triangle_verts, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), NULL);
     glEnableVertexAttribArray(0);
@@ -70,10 +100,19 @@ ms_opengl_update_buffers(struct ms_gl_bufs bufs, struct ms_mesh mesh)
     glBindVertexArray(bufs.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, bufs.VBO);
     
-    glBufferData(GL_ARRAY_BUFFER, mesh.primitives * mesh.degree * 3 * sizeof(f32), mesh.vertices, GL_STATIC_DRAW);
+    struct ms_v3 *triangle_verts = mesh.vertices;
+    u32 mesh_bytes = mesh.primitives * 3 * 3 * sizeof(f32);
+    
+    if (mesh.degree == 4) {
+        triangle_verts = _quad_to_triangle(mesh, &mesh_bytes);
+    }
+    
+    glBufferData(GL_ARRAY_BUFFER, mesh_bytes, triangle_verts, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), NULL);
     glEnableVertexAttribArray(0);
+    
+    free(triangle_verts);
 }
 
 static void
