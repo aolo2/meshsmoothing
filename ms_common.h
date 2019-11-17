@@ -20,7 +20,7 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
-static const f32 ERR = 1e-3f;
+static const f32 ERR = 1e-5f;
 
 struct ms_gl_bufs {
     u32 VAO;
@@ -44,4 +44,13 @@ struct ms_mesh {
     u32 primitives;
     struct ms_v3 *vertices;
     struct ms_v3 *normals;
+};
+
+struct ms_state {
+    bool keys[1024];
+    u32 cc_step;
+    u32 frame;
+    f32 scale_factor;
+    f32 translation;
+    f32 rot_angle;
 };

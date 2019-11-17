@@ -4,10 +4,11 @@
 static const char *vs_source = "#version 330 core\n"
 "layout (location = 0) in vec3 pos;\n"
 "uniform mat4 model;\n"
+"uniform mat4 view;\n"
 "uniform mat4 proj;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = proj * model * vec4(pos.x, pos.y, pos.z, 1.0);\n"
+"   gl_Position = proj * view * model * vec4(pos.x, pos.y, pos.z, 1.0);\n"
 "}";
 
 static const char *fs_source = "#version 330 core\n"

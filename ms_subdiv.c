@@ -44,8 +44,7 @@ _edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v
         }
     }
     
-    /* Should not happen */
-    assert(false);
+    return(me);
 }
 
 static u32
@@ -125,11 +124,14 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             struct ms_v3 end = mesh.vertices[face * mesh.degree + next_vert];
             
             u32 adj = _edge_adjacent_face(mesh, face, start, end);
-            
-            struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
-            struct ms_v3 edge_avg = ms_math_avg(start, end);
-            
-            edge_points[face * mesh.degree + vert] = ms_math_avg(face_avg, edge_avg);
+            if (adj != face) {
+                struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
+                struct ms_v3 edge_avg = ms_math_avg(start, end);
+                edge_points[face * mesh.degree + vert] = ms_math_avg(face_avg, edge_avg);
+            } else {
+                /* This is an edge of a hole */
+                edge_points[face * mesh.degree + vert] = ms_math_avg(start, end);
+            }
         }
     }
     

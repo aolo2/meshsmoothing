@@ -201,3 +201,4 @@ ms_file_stl_write_file(struct ms_mesh mesh, char *filename)
     printf("[INFO] Saved %s\n", filename);
 }
 
+/* TODO: export to obj */
