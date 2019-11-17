@@ -46,6 +46,12 @@ struct ms_mesh {
     struct ms_v3 *normals;
 };
 
+enum rotation_mode {
+    X_AXIS = 0,
+    Y_AXIS = 1,
+    Z_AXIS = 2
+};
+
 struct ms_state {
     bool keys[1024];
     u32 cc_step;
@@ -53,4 +59,5 @@ struct ms_state {
     f32 scale_factor;
     f32 translation;
     f32 rot_angle;
+    enum rotation_mode rotation;
 };

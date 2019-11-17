@@ -48,21 +48,14 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs)
         ms_file_stl_write_file(*mesh, filename);
     }
     
-    if (state.keys[GLFW_KEY_LEFT]) {
-        state.rot_angle -= 1.0f / 180.0f * M_PI;
-    }
-    
-    if (state.keys[GLFW_KEY_RIGHT]) {
-        state.rot_angle += 1.0f / 180.0f * M_PI;
-    }
-    
-    if (state.keys[GLFW_KEY_DOWN]) {
-        state.translation -= 0.1f;
-    }
-    
-    if (state.keys[GLFW_KEY_UP]) {
-        state.translation += 0.1f;
-    }
+    if (!state.keys[GLFW_KEY_LEFT] && !state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = 0.0f; }
+    if (state.keys[GLFW_KEY_LEFT])  { state.rot_angle = -1.0f / 180.0f * M_PI; }
+    if (state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = 1.0f / 180.0f * M_PI; }
+    if (state.keys[GLFW_KEY_DOWN])  { state.translation += 0.1f; }
+    if (state.keys[GLFW_KEY_UP])    { state.translation -= 0.1f; }
+    if (state.keys[GLFW_KEY_X])     { state.rotation = X_AXIS; }
+    if (state.keys[GLFW_KEY_Y])     { state.rotation = Y_AXIS; }
+    if (state.keys[GLFW_KEY_Z])     { state.rotation = Z_AXIS; }
 }
 
 s32
@@ -79,7 +72,22 @@ main(s32 argc, char *argv[])
     printf("\t Subdivide: ENTER\n");
     printf("\t Save to disk (interactive): SPACE\n");
     
-    struct ms_mesh mesh = ms_file_obj_read_file(argv[1]);
+    char *filename = argv[1];
+    char *extension = "stl";
+    u32 filename_len = strlen(filename);
+    
+    for (u32 i = filename_len - 1; i != 0; --i) {
+        if (filename[i] == '.') {
+            extension = filename + i + 1;
+        }
+    }
+    
+    struct ms_mesh mesh;
+    if (strcmp("stl", extension) == 0) {
+        mesh = ms_file_stl_read_file(filename);
+    } else if (strcmp("obj", extension) == 0) { 
+        mesh = ms_file_obj_read_file(filename);
+    }
     
     GLFWwindow *window = ms_opengl_init(1280, 720);
     glfwSetKeyCallback(window, key_callback);
@@ -96,11 +104,20 @@ main(s32 argc, char *argv[])
     struct ms_m4 proj = ms_math_ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 10.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_FALSE, (float *) proj.data);
     
+    struct ms_v3 axis[] = {
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+        { 0.0f, 0.0f, 1.0f },
+    };
+    
     state.cc_step = 0;
     state.frame = 0;
     state.scale_factor = 2.0f;
     state.rot_angle = 0.0f;
     state.translation = 0.0f;
+    state.rotation = Y_AXIS;
+    
+    struct ms_m4 rotate = ms_math_unitm4();
     
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -110,8 +127,9 @@ main(s32 argc, char *argv[])
         
         update_state(&mesh, bufs);
         
+        struct ms_v3 rotation_axis = axis[state.rotation];
         struct ms_m4 view = ms_math_translate(0.0f, 0.0f, -1.0f * state.translation);
-        struct ms_m4 rotate = ms_math_rot(0.0f, 1.0f, 0.0f, state.rot_angle);
+        rotate = ms_math_mm(rotate, ms_math_rot(rotation_axis.x, rotation_axis.y, rotation_axis.z, state.rot_angle));
         struct ms_m4 scale = ms_math_scale(state.scale_factor);
         struct ms_m4 model = ms_math_mm(scale, rotate);
         
