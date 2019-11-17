@@ -145,16 +145,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             u32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, NULL);
             u32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, NULL);
             
-            /* 
-* TODO fix me! 
-* This is a crutch. Extraordinary points have
-  * to be treated separately
-*/
-            if (nadj_faces != nadj_edges) {
-                new_verts[face * mesh.degree + vert] = old_vert;
-                continue;
-            }
-            
             /* Average of face points of all the faces this vertex is adjacent to */
             u32 *adj_faces = malloc(nadj_faces * sizeof(u32));
             _vert_adjacent_faces(mesh, old_vert, adj_faces);
