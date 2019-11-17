@@ -77,7 +77,7 @@ ms_opengl_init_buffers(struct ms_mesh mesh)
     glBindBuffer(GL_ARRAY_BUFFER, result.VBO);
     
     struct ms_v3 *triangle_verts = mesh.vertices;
-    u32 mesh_bytes = mesh.primitives * 3 * 3 * sizeof(f32);
+    u32 mesh_bytes = mesh.primitives * mesh.degree * sizeof(struct ms_v3);
     
     if (mesh.degree == 4) {
         triangle_verts = _quad_to_triangle(mesh, &mesh_bytes);

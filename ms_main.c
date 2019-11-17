@@ -1,6 +1,6 @@
 #include "ms_common.h"
 
-#include "ms_stl.c"
+#include "ms_file.c"
 #include "ms_opengl.c"
 #include "ms_math.c"
 #include "ms_subdiv.c"
@@ -39,13 +39,14 @@ main(s32 argc, char *argv[])
     printf("\t Subdivide: ENTER\n");
     printf("\t Save to disk (interactive): SPACE\n");
     
-    //struct ms_mesh mesh = ms_stl_read_file(argv[1]);
-    struct ms_mesh mesh = {
-        .primitives = 6,
-        .degree = 4,
-        .vertices = malloc(6 * 4 * sizeof(struct ms_v3))
-    };
+    struct ms_mesh mesh = ms_file_obj_read_file(argv[1]);
+    //struct ms_mesh mesh = {
+    //.primitives = 6,
+    //.degree = 4,
+    //.vertices = malloc(6 * 4 * sizeof(struct ms_v3))
+    //};
     
+#if 0
     mesh.vertices[0] = (struct ms_v3) { -1, -1, -1 };
     mesh.vertices[1] = (struct ms_v3) { -1, -1,  1 };
     mesh.vertices[2] = (struct ms_v3) { -1,  1,  1 };
@@ -56,8 +57,8 @@ main(s32 argc, char *argv[])
     mesh.vertices[6] = (struct ms_v3) { 1,  1,  1 };
     mesh.vertices[7] = (struct ms_v3) { 1, -1,  1 };
     
-    mesh.vertices[8] =  (struct ms_v3) { -1, -1, -1 };
-    mesh.vertices[9] =  (struct ms_v3) {  1, -1, -1 };
+    mesh.vertices[8]  = (struct ms_v3) { -1, -1, -1 };
+    mesh.vertices[9]  = (struct ms_v3) {  1, -1, -1 };
     mesh.vertices[10] = (struct ms_v3) {  1, -1,  1 };
     mesh.vertices[11] = (struct ms_v3) { -1, -1,  1 };
     
@@ -75,6 +76,7 @@ main(s32 argc, char *argv[])
     mesh.vertices[21] = (struct ms_v3) {  1, -1, 1 };
     mesh.vertices[22] = (struct ms_v3) {  1,  1, 1 };
     mesh.vertices[23] = (struct ms_v3) { -1,  1, 1 };
+#endif
     
     GLFWwindow *window = ms_opengl_init(1280, 720);
     glfwSetKeyCallback(window, key_callback);
@@ -117,7 +119,7 @@ main(s32 argc, char *argv[])
             char filename[512];
             printf("[SAVE] Filename: ");
             scanf("%s", filename);
-            ms_stl_write_file(mesh, filename);
+            ms_file_stl_write_file(mesh, filename);
             ms_save_mesh = false;
         }
         
