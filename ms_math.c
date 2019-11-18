@@ -88,6 +88,23 @@ ms_math_ortho(f32 left, f32 right, f32 top, f32 bottom, f32 near, f32 far)
     return(result);
 }
 
+static struct ms_m4
+ms_math_perspective(f32 aspect, f32 fov_deg, f32 p_near, f32 p_far)
+{
+    f32 fov_rad = fov_deg / 180.0f * M_PI;
+    f32 tan_fov_2 = tanf(fov_rad / 2.0f);
+    
+    struct ms_m4 result = {
+        .data = {
+            { 1.0f / (aspect * tan_fov_2), 0.0f,             0.0f,                                0.0f },
+            { 0.0f,                        1.0f / tan_fov_2, 0.0f,                                0.0f },
+            { 0.0f,                        0.0f,             (p_far + p_near) / (p_far - p_near), (2.0f * p_far * p_near) / (p_near - p_far) },
+            { 0.0f,                        0.0f,             1.0f,                                0.0f }
+        }
+    };
+    
+    return(result);
+}
 
 static struct ms_m4
 ms_math_rot(f32 x, f32 y, f32 z, f32 angle_rad)

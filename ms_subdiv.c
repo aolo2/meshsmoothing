@@ -155,6 +155,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
                 avg_face_point.y += face_points[adj_faces[i]].y;
                 avg_face_point.z += face_points[adj_faces[i]].z;
             }
+            
             avg_face_point.x /= (f32) nadj_faces;
             avg_face_point.y /= (f32) nadj_faces;
             avg_face_point.z /= (f32) nadj_faces;
@@ -172,6 +173,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
                 avg_mid_edge_point.y += mid.y;
                 avg_mid_edge_point.z += mid.z;
             }
+            
             avg_mid_edge_point.x /= (f32) nadj_edges;
             avg_mid_edge_point.y /= (f32) nadj_edges;
             avg_mid_edge_point.z /= (f32) nadj_edges;

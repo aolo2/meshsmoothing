@@ -7,3 +7,6 @@ debug:
 release:
 	@echo "[INFO] RELEASE build"
 	@+make -f build/release.mk all --no-print-directory
+
+.PHONY:
+	all debug release

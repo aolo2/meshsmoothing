@@ -49,8 +49,8 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs)
     }
     
     if (!state.keys[GLFW_KEY_LEFT] && !state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = 0.0f; }
-    if (state.keys[GLFW_KEY_LEFT])  { state.rot_angle = -1.0f / 180.0f * M_PI; }
-    if (state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = 1.0f / 180.0f * M_PI; }
+    if (state.keys[GLFW_KEY_LEFT])  { state.rot_angle = 1.0f / 180.0f * M_PI; }
+    if (state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = -1.0f / 180.0f * M_PI; }
     if (state.keys[GLFW_KEY_DOWN])  { state.translation += 0.1f; }
     if (state.keys[GLFW_KEY_UP])    { state.translation -= 0.1f; }
     if (state.keys[GLFW_KEY_X])     { state.rotation = X_AXIS; }
@@ -67,13 +67,16 @@ main(s32 argc, char *argv[])
     }
     
     printf("[INFO] Keymap\n");
-    printf("\t Zoom in: UP ARROW\n");
-    printf("\t Zoom out: DOWN ARROW\n");
-    printf("\t Subdivide: ENTER\n");
-    printf("\t Save to disk (interactive): SPACE\n");
+    printf("\t Zoom in:                             UP ARROW\n");
+    printf("\t Zoom out:                            DOWN ARROW\n");
+    printf("\t Change rotation axis:                x/y/z\n");
+    printf("\t Rotate clockwise around axis:        RIGHT ARROW\n");
+    printf("\t Rotate counterclockwise around axis: LEFT ARROW\n");
+    printf("\t Subdivide:                           ENTER\n");
+    printf("\t Save to disk (interactive):          SPACE\n");
     
     char *filename = argv[1];
-    char *extension = "stl";
+    char *extension = filename;
     u32 filename_len = strlen(filename);
     
     for (u32 i = filename_len - 1; i != 0; --i) {
@@ -82,11 +85,14 @@ main(s32 argc, char *argv[])
         }
     }
     
-    struct ms_mesh mesh;
+    struct ms_mesh mesh = { 0 };
     if (strcmp("stl", extension) == 0) {
         mesh = ms_file_stl_read_file(filename);
     } else if (strcmp("obj", extension) == 0) { 
         mesh = ms_file_obj_read_file(filename);
+    } else {
+        fprintf(stderr, "[ERROR] Unknown file extension: .%s\n", extension);
+        return(1);
     }
     
     GLFWwindow *window = ms_opengl_init(1280, 720);
@@ -101,7 +107,9 @@ main(s32 argc, char *argv[])
     glUseProgram(shader_program);
     glBindVertexArray(bufs.VAO);
     
-    struct ms_m4 proj = ms_math_ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 10.0f);
+    f32 aspect = 1280.0f / 720.0f;
+    struct ms_m4 proj = ms_math_perspective(aspect, 90.0f, 1.0f, 100.0f);
+    //struct ms_m4 proj = ms_math_ortho(-1.0f * aspect, aspect, -1.0f, 1.0f, 0.1f, 10.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_FALSE, (float *) proj.data);
     
     struct ms_v3 axis[] = {
