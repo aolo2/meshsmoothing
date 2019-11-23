@@ -141,31 +141,54 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
     for (u32 face = 0; face < mesh.primitives; ++face) {
         for (u32 vert = 0; vert < mesh.degree; ++vert) {
             struct ms_v3 old_vert = mesh.vertices[face * mesh.degree + vert];
+            struct ms_v3 new_vert;
             
-            u32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, NULL);
-            u32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, NULL);
+            s32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, NULL);
+            s32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, NULL);
             
             /* Average of face points of all the faces this vertex is adjacent to */
             u32 *adj_faces = malloc(nadj_faces * sizeof(u32));
+            struct ms_v3 *adj_edges = malloc(nadj_edges * 2 * sizeof(struct ms_v3));
             _vert_adjacent_faces(mesh, old_vert, adj_faces);
+            _vert_adjacent_edges(mesh, old_vert, adj_edges);
+            
+            if (false && nadj_faces != nadj_edges) {
+                printf("hole!\n");
+                
+                
+#if 0
+                /* This vertex is on an edge of a hole */
+                struct ms_v3 avg_mid_edge_point = { 0 };
+                
+                for (u32 i = 0; i < nadj_edges; ++i) {
+                    struct ms_v3 start = adj_edges[2 * i + 0];
+                    struct ms_v3 end = adj_edges[2 * i + 1];
+                    struct ms_v3 mid = ms_math_avg(start, end);
+                    
+                    /* Only take into account edges that are also on the edge of a hole */
+                    u32 adj_face = _edge_adjacent_face(mesh, face, start, end);
+                    if (adj_face == face) {
+                        avg_mid_edge_point.x += mid.x;
+                        avg_mid_edge_point.y += mid.y;
+                        avg_mid_edge_point.z += mid.z;
+                    }
+                }
+#endif
+            }
             
             struct ms_v3 avg_face_point = { 0 };
-            for (u32 i = 0; i < nadj_faces; ++i) {
+            for (s32 i = 0; i < nadj_faces; ++i) {
                 avg_face_point.x += face_points[adj_faces[i]].x;
                 avg_face_point.y += face_points[adj_faces[i]].y;
                 avg_face_point.z += face_points[adj_faces[i]].z;
             }
-            
             avg_face_point.x /= (f32) nadj_faces;
             avg_face_point.y /= (f32) nadj_faces;
             avg_face_point.z /= (f32) nadj_faces;
             
             /* Average of mid points of all the edges this vertex is adjacent to */
-            struct ms_v3 *adj_edges = malloc(nadj_edges * 2 * sizeof(struct ms_v3));
-            _vert_adjacent_edges(mesh, old_vert, adj_edges);
-            
             struct ms_v3 avg_mid_edge_point = { 0 };
-            for (u32 i = 0; i < nadj_edges; ++i) {
+            for (s32 i = 0; i < nadj_edges; ++i) {
                 struct ms_v3 start = adj_edges[2 * i + 0];
                 struct ms_v3 end = adj_edges[2 * i + 1];
                 struct ms_v3 mid = ms_math_avg(start, end);
@@ -173,7 +196,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
                 avg_mid_edge_point.y += mid.y;
                 avg_mid_edge_point.z += mid.z;
             }
-            
             avg_mid_edge_point.x /= (f32) nadj_edges;
             avg_mid_edge_point.y /= (f32) nadj_edges;
             avg_mid_edge_point.z /= (f32) nadj_edges;
@@ -187,7 +209,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             f32 w3 = 2.0f * w2;
             
             /* Weighted average to obtain a new vertex */
-            struct ms_v3 new_vert;
             new_vert.x = w1 * old_vert.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
             new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
             new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;

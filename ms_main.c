@@ -108,7 +108,7 @@ main(s32 argc, char *argv[])
     glBindVertexArray(bufs.VAO);
     
     f32 aspect = 1280.0f / 720.0f;
-    struct ms_m4 proj = ms_math_perspective(aspect, 90.0f, 1.0f, 100.0f);
+    struct ms_m4 proj = ms_math_perspective(aspect, 90.0f, 0.5f, 100.0f);
     //struct ms_m4 proj = ms_math_ortho(-1.0f * aspect, aspect, -1.0f, 1.0f, 0.1f, 10.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_FALSE, (float *) proj.data);
     
