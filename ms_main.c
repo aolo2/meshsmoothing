@@ -109,7 +109,9 @@ main(s32 argc, char *argv[])
     
     f32 aspect = 1280.0f / 720.0f;
     struct ms_m4 proj = ms_math_perspective(aspect, 90.0f, 0.5f, 100.0f);
+    struct ms_m4 rotate = ms_math_unitm4();
     //struct ms_m4 proj = ms_math_ortho(-1.0f * aspect, aspect, -1.0f, 1.0f, 0.1f, 10.0f);
+    
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_FALSE, (float *) proj.data);
     
     struct ms_v3 axis[] = {
@@ -125,7 +127,6 @@ main(s32 argc, char *argv[])
     state.translation = 0.0f;
     state.rotation = Y_AXIS;
     
-    struct ms_m4 rotate = ms_math_unitm4();
     
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -141,7 +142,7 @@ main(s32 argc, char *argv[])
         struct ms_m4 scale = ms_math_scale(state.scale_factor);
         struct ms_m4 model = ms_math_mm(scale, rotate);
         
-        glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, (float *) view.data);
+        glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"),  1, GL_FALSE, (float *) view.data);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, (float *) model.data);
         
         if (mesh.degree == 3) {

@@ -48,7 +48,7 @@ _edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v
 }
 
 static u32
-_vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
+_vert_adjacent_faces_repeats(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
 {
     u32 tr_count = 0;
     
@@ -69,7 +69,7 @@ _vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
 }
 
 static u32
-_vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 *dest)
+_vert_adjacent_edges_repeats(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 *dest)
 {
     u32 edge_count = 0;
     
@@ -90,6 +90,78 @@ _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 *dest
     }
     
     return(edge_count);
+}
+
+static u32
+_find_edge(struct ms_v3 *edges, u32 me)
+{
+    struct ms_v3 me_start = edges[me * 2 + 0];
+    struct ms_v3 me_end = edges[me * 2 + 1];
+    
+    for (u32 edge = 0; edge < me; ++edge) {
+        struct ms_v3 start = edges[edge * 2 + 0];
+        struct ms_v3 end = edges[edge * 2 + 1];
+        
+        if (_verts_equal(me_start, start) && _verts_equal(me_end, end)) {
+            if (edge != me) {
+                return(edge);
+            }
+        }
+        
+        if (_verts_equal(me_start, end) && _verts_equal(me_end, start)) {
+            if (edge != me) {
+                return(edge);
+            }
+        }
+    }
+    
+    return(me);
+}
+
+static u32
+_vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 **dest)
+{
+    /* 
+* Edges can be repeated between faces, but not all of them do (e.g. 
+ * edges near a hole only occur once). Here we detect all the duplicates
+ * and correct the return values
+*/
+    u32 nedges = _vert_adjacent_edges_repeats(mesh, point, NULL);
+    u32 nedges_no_repeats = 0;
+    struct ms_v3 *edges = malloc(nedges * 2 * sizeof(struct ms_v3));
+    struct ms_v3 *edges_no_repeats = malloc(nedges * 2 * sizeof(struct ms_v3));
+    
+    _vert_adjacent_edges_repeats(mesh, point, edges);
+    
+    for (u32 edge = 0; edge < nedges; ++edge) {
+        struct ms_v3 start = edges[edge * 2 + 0];
+        struct ms_v3 end = edges[edge * 2 + 1];
+        
+        u32 index = _find_edge(edges, edge);
+        if (index == edge) {
+            edges_no_repeats[nedges_no_repeats * 2 + 0] = start;
+            edges_no_repeats[nedges_no_repeats * 2 + 1] = end;
+            ++nedges_no_repeats;
+        }
+    }
+    
+    free(edges);
+    *dest = edges_no_repeats;
+    
+    return(nedges_no_repeats);
+}
+
+static u32
+_vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 **dest)
+{
+    /* There are no repeated faces, but just for consistency of the API */
+    u32 nfaces = _vert_adjacent_faces_repeats(mesh, point, NULL);
+    u32 *faces = malloc(nfaces * sizeof(u32));
+    
+    _vert_adjacent_faces_repeats(mesh, point, faces);
+    *dest = faces;
+    
+    return(nfaces);
 }
 
 static struct ms_mesh
@@ -143,75 +215,79 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             struct ms_v3 old_vert = mesh.vertices[face * mesh.degree + vert];
             struct ms_v3 new_vert;
             
-            s32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, NULL);
-            s32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, NULL);
+            u32 *adj_faces;
+            struct ms_v3 *adj_edges;
+            s32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, &adj_faces);
+            s32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, &adj_edges);
             
-            /* Average of face points of all the faces this vertex is adjacent to */
-            u32 *adj_faces = malloc(nadj_faces * sizeof(u32));
-            struct ms_v3 *adj_edges = malloc(nadj_edges * 2 * sizeof(struct ms_v3));
-            _vert_adjacent_faces(mesh, old_vert, adj_faces);
-            _vert_adjacent_edges(mesh, old_vert, adj_edges);
-            
-            if (false && nadj_faces != nadj_edges) {
-                printf("hole!\n");
+            if (nadj_faces != nadj_edges) {
+                //new_vert = old_vert;
+#if 1
                 
-                
-#if 0
                 /* This vertex is on an edge of a hole */
+                u32 nedges_adj_to_hole = 0;
                 struct ms_v3 avg_mid_edge_point = { 0 };
                 
-                for (u32 i = 0; i < nadj_edges; ++i) {
+                for (s32 i = 0; i < nadj_edges; ++i) {
                     struct ms_v3 start = adj_edges[2 * i + 0];
                     struct ms_v3 end = adj_edges[2 * i + 1];
                     struct ms_v3 mid = ms_math_avg(start, end);
                     
                     /* Only take into account edges that are also on the edge of a hole */
-                    u32 adj_face = _edge_adjacent_face(mesh, face, start, end);
-                    if (adj_face == face) {
+                    u32 adj_face = _edge_adjacent_face(mesh, 0, start, end);
+                    u32 another_adj_face = _edge_adjacent_face(mesh, adj_face, start, end);
+                    if (adj_face == another_adj_face) {
+                        ++nedges_adj_to_hole;
                         avg_mid_edge_point.x += mid.x;
                         avg_mid_edge_point.y += mid.y;
                         avg_mid_edge_point.z += mid.z;
                     }
                 }
+                
+                new_vert.x = (avg_mid_edge_point.x + old_vert.x) / (nedges_adj_to_hole + 1);
+                new_vert.y = (avg_mid_edge_point.y + old_vert.y) / (nedges_adj_to_hole + 1);
+                new_vert.z = (avg_mid_edge_point.z + old_vert.z) / (nedges_adj_to_hole + 1);
 #endif
+            } else {
+                
+                /* Average of face points of all the faces this vertex is adjacent to */
+                struct ms_v3 avg_face_point = { 0 };
+                for (s32 i = 0; i < nadj_faces; ++i) {
+                    avg_face_point.x += face_points[adj_faces[i]].x;
+                    avg_face_point.y += face_points[adj_faces[i]].y;
+                    avg_face_point.z += face_points[adj_faces[i]].z;
+                }
+                avg_face_point.x /= (f32) nadj_faces;
+                avg_face_point.y /= (f32) nadj_faces;
+                avg_face_point.z /= (f32) nadj_faces;
+                
+                /* Average of mid points of all the edges this vertex is adjacent to */
+                struct ms_v3 avg_mid_edge_point = { 0 };
+                for (s32 i = 0; i < nadj_edges; ++i) {
+                    struct ms_v3 start = adj_edges[2 * i + 0];
+                    struct ms_v3 end = adj_edges[2 * i + 1];
+                    struct ms_v3 mid = ms_math_avg(start, end);
+                    avg_mid_edge_point.x += mid.x;
+                    avg_mid_edge_point.y += mid.y;
+                    avg_mid_edge_point.z += mid.z;
+                }
+                avg_mid_edge_point.x /= (f32) nadj_edges;
+                avg_mid_edge_point.y /= (f32) nadj_edges;
+                avg_mid_edge_point.z /= (f32) nadj_edges;
+                
+                free(adj_faces);
+                free(adj_edges);
+                
+                /* Weights */
+                f32 w1 = (f32) (nadj_faces - 3) / (f32) nadj_faces;
+                f32 w2 = 1.0f / (f32) nadj_faces;
+                f32 w3 = 2.0f * w2;
+                
+                /* Weighted average to obtain a new vertex */
+                new_vert.x = w1 * old_vert.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
+                new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
+                new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
             }
-            
-            struct ms_v3 avg_face_point = { 0 };
-            for (s32 i = 0; i < nadj_faces; ++i) {
-                avg_face_point.x += face_points[adj_faces[i]].x;
-                avg_face_point.y += face_points[adj_faces[i]].y;
-                avg_face_point.z += face_points[adj_faces[i]].z;
-            }
-            avg_face_point.x /= (f32) nadj_faces;
-            avg_face_point.y /= (f32) nadj_faces;
-            avg_face_point.z /= (f32) nadj_faces;
-            
-            /* Average of mid points of all the edges this vertex is adjacent to */
-            struct ms_v3 avg_mid_edge_point = { 0 };
-            for (s32 i = 0; i < nadj_edges; ++i) {
-                struct ms_v3 start = adj_edges[2 * i + 0];
-                struct ms_v3 end = adj_edges[2 * i + 1];
-                struct ms_v3 mid = ms_math_avg(start, end);
-                avg_mid_edge_point.x += mid.x;
-                avg_mid_edge_point.y += mid.y;
-                avg_mid_edge_point.z += mid.z;
-            }
-            avg_mid_edge_point.x /= (f32) nadj_edges;
-            avg_mid_edge_point.y /= (f32) nadj_edges;
-            avg_mid_edge_point.z /= (f32) nadj_edges;
-            
-            free(adj_faces);
-            free(adj_edges);
-            
-            /* Weights */
-            f32 w1 = (f32) (nadj_faces - 3) / (f32) nadj_faces;
-            f32 w2 = 1.0f / (f32) nadj_faces;
-            f32 w3 = 2.0f * w2;
-            
-            /* Weighted average to obtain a new vertex */
-            new_vert.x = w1 * old_vert.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
-            new_vert.y = w1 * old_vert.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
-            new_vert.z = w1 * old_vert.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
             
             new_verts[face * mesh.degree + vert] = new_vert;
         }
