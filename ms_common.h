@@ -58,6 +58,10 @@ struct ms_state {
     bool mousedown;
     f64 cursor[2];
     f64 cursor_last[2];
+    f64 qx1;
+    f64 qy1;
+    f64 qx2;
+    f64 qy2;
     
     u32 frame;
     u32 cc_step;
@@ -65,5 +69,7 @@ struct ms_state {
     f32 translation;
     f32 rot_angle;
     enum rotation_mode rotation;
+    
     struct ms_v3 *triangulated_points;
+    bool *marked;
 };

@@ -13,9 +13,10 @@ static const char *vs_source = "#version 330 core\n"
 
 static const char *fs_source = "#version 330 core\n"
 "out vec4 frag_color;\n"
+"uniform vec3 color;\n"
 "void main()\n"
 "{\n"
-"    frag_color = vec4(1.0f);\n"
+"    frag_color = vec4(color, 1.0f);\n"
 "}\n";
 
 static const char *vs_source_ui = "#version 330 core\n"

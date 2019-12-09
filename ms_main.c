@@ -34,23 +34,41 @@ mousebutton_callback(GLFWwindow* window, int button, int action, int mods)
         }
     }
     
+    if (mods & GLFW_MOD_SHIFT) {
+        state.keys[1024 - GLFW_MOD_SHIFT] = true;
+    } else {
+        state.keys[1024 - GLFW_MOD_SHIFT] = false;
+    }
+    
+    
     (void) window;
     (void) mods;
 }
 
-static void
-update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs)
+static bool
+update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
 {
     /* TODO: Arcball camera */
+    bool result = false;
     
     if (state.keys[GLFW_KEY_ENTER]) {
         /* To prevent accidental spamming */
         state.keys[GLFW_KEY_ENTER] = false;
         
-        struct ms_mesh new_mesh = ms_subdiv_catmull_clark(*mesh);
+        struct ms_v3 *special_points = malloc(4096 * sizeof(struct ms_v3));
+        u32 nspecial = 0;
+        
+        for (u32 i = 0; i < npoints; ++i) {
+            if (state.marked[i]) {
+                special_points[nspecial++] = state.triangulated_points[i];
+            }
+        }
+        
+        struct ms_mesh new_mesh = ms_subdiv_catmull_clark(*mesh, special_points, nspecial);
         free(mesh->vertices);
         free(mesh->normals);
         
+        result = true;
         *mesh = new_mesh;
         ms_opengl_update_buffers(bufs, &state.triangulated_points, *mesh);
         printf("[INFO] Finished Catmull-Clark [%d]\n", ++state.cc_step);
@@ -75,6 +93,30 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs)
     if (state.keys[GLFW_KEY_X])     { state.rotation = X_AXIS; }
     if (state.keys[GLFW_KEY_Y])     { state.rotation = Y_AXIS; }
     if (state.keys[GLFW_KEY_Z])     { state.rotation = Z_AXIS; }
+    
+    f32 qx1 = (state.cursor_last[0] - 640.0f) / 640.0f;
+    f32 qy1 = (state.cursor_last[1] - 360.0f) / -360.0f;
+    f32 qx2 = (state.cursor[0] - 640.0f) / 640.0f;
+    f32 qy2 = (state.cursor[1] - 360.0f) / -360.0f;
+    
+    if (qx1 > qx2) {
+        f32 tmp = qx1;
+        qx1 = qx2;
+        qx2 = tmp;
+    }
+    
+    if (qy1 > qy2) {
+        f32 tmp = qy1;
+        qy1 = qy2;
+        qy2 = tmp;
+    }
+    
+    state.qx1 = qx1;
+    state.qy1 = qy1;
+    state.qx2 = qx2;
+    state.qy2 = qy2;
+    
+    return(result);
 }
 
 static void
@@ -129,9 +171,9 @@ main(s32 argc, char *argv[])
     
     assert(window);
     
-    struct ms_v3 *projected_points = malloc(6 * mesh.primitives * sizeof(struct ms_v3));
     struct ms_gl_bufs bufs = ms_opengl_init_buffers(mesh, &state.triangulated_points);
     s32 shader_program = ms_opengl_init_shader_program();
+    struct ms_v3 *projected_points = malloc(6 * mesh.primitives * sizeof(struct ms_v3));
     
     f32 aspect = 1280.0f / 720.0f;
     struct ms_m4 proj = ms_math_perspective(aspect, 75.0f, 0.5f, 100.0f);
@@ -140,7 +182,7 @@ main(s32 argc, char *argv[])
     
     u32 npoints = 3 * mesh.primitives;
     if (mesh.degree == 4) {
-        npoints  = 6 * mesh.primitives;
+        npoints = 6 * mesh.primitives;
     }
     
     struct ms_v3 axis[] = {
@@ -149,12 +191,16 @@ main(s32 argc, char *argv[])
         { 0.0f, 0.0f, 1.0f },
     };
     
+    struct ms_v3 color_white = { 1.0f, 1.0f, 1.0f };
+    struct ms_v3 color_yellow = { 1.0f, 1.0f, 0.0f };
+    
     state.cc_step = 0;
     state.frame = 0;
     state.scale_factor = 2.0f;
     state.rot_angle = 0.0f;
     state.translation = 6.4f;
     state.rotation = Y_AXIS;
+    state.marked = calloc(1, npoints * sizeof(bool));
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glPointSize(8.0f);
@@ -167,66 +213,60 @@ main(s32 argc, char *argv[])
         glfwPollEvents();
         glfwGetCursorPos(window, state.cursor + 0, state.cursor + 1);
         
-        u32 cc = state.cc_step;
-        update_state(&mesh, bufs);
-        if (cc != state.cc_step) {
+        bool subdivided = update_state(&mesh, bufs, npoints);
+        if (subdivided) {
             npoints = 6 * mesh.primitives;
             projected_points = realloc(projected_points, npoints * sizeof(struct ms_v3));
+            state.marked = realloc(state.marked, npoints * sizeof(bool));
+            memset(state.marked, false, npoints * sizeof(bool));
         }
         
         struct ms_v3 rotation_axis = axis[state.rotation];
         rotate = ms_math_mm(rotate, ms_math_rot(rotation_axis.x, rotation_axis.y, rotation_axis.z, state.rot_angle));
         
-        //printf("%f %f %f\n", state.rot_angle, state.translation, state.scale_factor);
-        
         struct ms_m4 view = ms_math_translate(0.0f, 0.0f, -1.0f * state.translation);
         struct ms_m4 scale = ms_math_scale(state.scale_factor);
         struct ms_m4 model = ms_math_mm(scale, rotate);
         
-        /* TODO: move to state update */
-        f32 qx1 = (state.cursor_last[0] - 640.0f) / 640.0f;
-        f32 qy1 = (state.cursor_last[1] - 360.0f) / -360.0f;
-        f32 qx2 = (state.cursor[0] - 640.0f) / 640.0f;
-        f32 qy2 = (state.cursor[1] - 360.0f) / -360.0f;
-        
-        if (qx1 > qx2) {
-            f32 tmp = qx1;
-            qx1 = qx2;
-            qx2 = tmp;
-        }
-        
-        if (qy1 > qy2) {
-            f32 tmp = qy1;
-            qy1 = qy2;
-            qy2 = tmp;
+        for (u32 i = 0; i < npoints; ++i) {
+            projected_points[i] = ms_math_mv(model, state.triangulated_points[i]);
+            projected_points[i] = ms_math_mv(view, projected_points[i]);
+            projected_points[i] = ms_math_mv(proj, projected_points[i]);
         }
         
         if (state.mousedown) {
-            ms_opengl_flatquad(qx1, qy1, qx2, qy2);
-            for (u32 i = 0; i < npoints; ++i) {
-                projected_points[i] = ms_math_mv(model, state.triangulated_points[i]);
-                projected_points[i] = ms_math_mv(view, projected_points[i]);
-                projected_points[i] = ms_math_mv(proj, projected_points[i]);
-            }
+            ms_opengl_flatquad(state.qx1, state.qy1, state.qx2, state.qy2);
         }
         
         glBindVertexArray(bufs.VAO);
         glUseProgram(shader_program);
         
         /* NOTE: OpenGL expects column-major, I use row-major, hence the GL_TRUE for transosition */
+        glUniform3f(glGetUniformLocation(shader_program, "color"), color_white.x, color_white.y, color_white.z);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_TRUE, (float *) proj.data);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"),  1, GL_TRUE, (float *) view.data);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_TRUE, (float *) model.data);
         
         glDrawArrays(GL_TRIANGLES, 0, npoints);
+        glUniform3f(glGetUniformLocation(shader_program, "color"), color_yellow.x, color_yellow.y, color_yellow.z);
         
         if (state.mousedown) {
+            if (!state.keys[1024 - GLFW_MOD_SHIFT]) {
+                memset(state.marked, false, npoints * sizeof(bool));
+            }
+            
             for (u32 i = 0; i < npoints; ++i) {
                 f32 px = projected_points[i].x;
                 f32 py = projected_points[i].y;
-                if (qx1 <= px && px <= qx2 && qy1 <= py && py <= qy2) {
-                    glDrawArrays(GL_POINTS, i, 1);
+                if (state.qx1 <= px && px <= state.qx2 && state.qy1 <= py && py <= state.qy2) {
+                    state.marked[i] = true; 
                 }
+            }
+        }
+        
+        for (u32 i = 0; i < npoints; ++i) {
+            if (state.marked[i]) {
+                glDrawArrays(GL_POINTS, i, 1);
             }
         }
         

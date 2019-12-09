@@ -164,8 +164,20 @@ _vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 **dest)
     return(nfaces);
 }
 
+static bool
+_vert_special(struct ms_v3 vert, struct ms_v3 *special, u32 nspecial)
+{
+    for (u32 i = 0; i < nspecial; ++i) {
+        if (_verts_equal(special[i], vert)) {
+            return(true);
+        }
+    }
+    
+    return(false);
+}
+
 static struct ms_mesh
-ms_subdiv_catmull_clark(struct ms_mesh mesh)
+ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial)
 {
     /* Face points */
     struct ms_v3 *face_points = malloc(mesh.primitives * sizeof(struct ms_v3));
@@ -214,6 +226,11 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
         for (u32 vert = 0; vert < mesh.degree; ++vert) {
             struct ms_v3 old_vert = mesh.vertices[face * mesh.degree + vert];
             struct ms_v3 new_vert;
+            
+            if (_vert_special(old_vert, special, nspecial)) {
+                new_verts[face * mesh.degree + vert] = old_vert;
+                continue;
+            }
             
             u32 *adj_faces;
             struct ms_v3 *adj_edges;
