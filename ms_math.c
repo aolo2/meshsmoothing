@@ -10,60 +10,6 @@ ms_math_avg(struct ms_v3 a, struct ms_v3 b)
     return(result);
 }
 
-static f32
-ms_math_dot(struct ms_v3 a, struct ms_v3 b)
-{
-    f32 result = a.x * b.x + a.y * b.y + a.z * b.z;
-    return(result);
-}
-
-/* Alias  */
-static f32
-ms_math_inner(struct ms_v3 a, struct ms_v3 b)
-{
-    return(ms_math_dot(a, b));
-}
-
-static f32
-ms_math_len(struct ms_v3 vec)
-{
-    f32 result = sqrtf(vec.x * vec.x * vec.y * vec.y + vec.z * vec.z);
-    return(result);
-}
-
-static struct ms_v3
-ms_math_normalize(struct ms_v3 vec)
-{
-    f32 len = ms_math_len(vec);
-    f32 fact = 1.0f / len;
-    
-    struct ms_v3 result = vec;
-    
-    result.x *= fact;
-    result.y *= fact;
-    result.z *= fact;
-    
-    return(result);
-}
-
-static struct ms_v3
-ms_math_navg(struct ms_v3 *verts, u32 count)
-{
-    struct ms_v3 result = { 0 };
-    
-    for (u32 i = 0; i < count; ++i) {
-        result.x += verts[i].x;
-        result.y += verts[i].y;
-        result.z += verts[i].z;
-    }
-    
-    result.x /= (f32) count;
-    result.y /= (f32) count;
-    result.z /= (f32) count;
-    
-    return(result);
-}
-
 static struct ms_m4
 ms_math_unitm4()
 {
@@ -174,16 +120,6 @@ ms_math_mm(struct ms_m4 B, struct ms_m4 A)
             }
         }
     }
-    
-    return(result);
-}
-
-static struct ms_m4
-ms_math_mm3(struct ms_m4 A, struct ms_m4 B, struct ms_m4 C)
-{
-    struct ms_m4 result;
-    
-    result = ms_math_mm(A, ms_math_mm(B, C));
     
     return(result);
 }

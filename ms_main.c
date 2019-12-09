@@ -48,7 +48,6 @@ mousebutton_callback(GLFWwindow* window, int button, int action, int mods)
 static bool
 update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
 {
-    /* TODO: Arcball camera */
     bool result = false;
     
     if (state.keys[GLFW_KEY_ENTER]) {
@@ -117,15 +116,6 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
     state.qy2 = qy2;
     
     return(result);
-}
-
-static void
-print_matrix(struct ms_m4 M)
-{
-    printf("%f %f %f %f\n", M.data[0][0], M.data[0][1], M.data[0][2], M.data[0][3]);
-    printf("%f %f %f %f\n", M.data[1][0], M.data[1][1], M.data[1][2], M.data[1][3]);
-    printf("%f %f %f %f\n", M.data[2][0], M.data[2][1], M.data[2][2], M.data[2][3]);
-    printf("%f %f %f %f\n", M.data[3][0], M.data[3][1], M.data[3][2], M.data[3][3]);
 }
 
 s32
