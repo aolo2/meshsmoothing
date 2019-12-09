@@ -10,6 +10,42 @@ ms_math_avg(struct ms_v3 a, struct ms_v3 b)
     return(result);
 }
 
+static f32
+ms_math_dot(struct ms_v3 a, struct ms_v3 b)
+{
+    f32 result = a.x * b.x + a.y * b.y + a.z * b.z;
+    return(result);
+}
+
+/* Alias  */
+static f32
+ms_math_inner(struct ms_v3 a, struct ms_v3 b)
+{
+    return(ms_math_dot(a, b));
+}
+
+static f32
+ms_math_len(struct ms_v3 vec)
+{
+    f32 result = sqrtf(vec.x * vec.x * vec.y * vec.y + vec.z * vec.z);
+    return(result);
+}
+
+static struct ms_v3
+ms_math_normalize(struct ms_v3 vec)
+{
+    f32 len = ms_math_len(vec);
+    f32 fact = 1.0f / len;
+    
+    struct ms_v3 result = vec;
+    
+    result.x *= fact;
+    result.y *= fact;
+    result.z *= fact;
+    
+    return(result);
+}
+
 static struct ms_v3
 ms_math_navg(struct ms_v3 *verts, u32 count)
 {
@@ -54,7 +90,6 @@ ms_math_scale(f32 scale)
             { 0.0f,  0.0f,  0.0f,  1.0f }
         }
     };
-    
     return(result);
 }
 
@@ -63,25 +98,10 @@ ms_math_translate(f32 x, f32 y, f32 z)
 {
     struct ms_m4 result = {
         .data = {
-            { 1.0f, 0.0f, 0.0f, 0.0f },
-            { 0.0f, 1.0f, 0.0f, 0.0f },
-            { 0.0f, 0.0f, 1.0f, 0.0f },
-            { x,    y,    z,    1.0f }
-        }
-    };
-    
-    return(result);
-}
-
-static struct ms_m4
-ms_math_ortho(f32 left, f32 right, f32 top, f32 bottom, f32 near, f32 far)
-{
-    struct ms_m4 result = {
-        .data = {
-            { 2.0f / (right - left), 0.0f,                  0.0f,                (right + left) / (left - right) },
-            { 0.0f,                  2.0f / (top - bottom), 0.0f,                (top + bottom) / (bottom - top) },
-            { 0.0f,                  0.0f,                  2.0f / (near - far), (far + near) / (near - far) },
-            { 0.0f,                  0.0f,                  0.0f,                1.0f }
+            { 1.0f, 0.0f, 0.0f, x },
+            { 0.0f, 1.0f, 0.0f, y },
+            { 0.0f, 0.0f, 1.0f, z },
+            { 0.0f, 0.0f, 0.0f, 1.0f }
         }
     };
     
@@ -96,10 +116,10 @@ ms_math_perspective(f32 aspect, f32 fov_deg, f32 p_near, f32 p_far)
     
     struct ms_m4 result = {
         .data = {
-            { 1.0f / (aspect * tan_fov_2), 0.0f,             0.0f,                                0.0f },
-            { 0.0f,                        1.0f / tan_fov_2, 0.0f,                                0.0f },
-            { 0.0f,                        0.0f,             (p_far + p_near) / (p_far - p_near), (2.0f * p_far * p_near) / (p_near - p_far) },
-            { 0.0f,                        0.0f,             1.0f,                                0.0f }
+            { 1.0f / (aspect * tan_fov_2), 0.0f,             0.0f,                                       0.0f                                       },
+            { 0.0f,                        1.0f / tan_fov_2, 0.0f,                                       0.0f                                       },
+            { 0.0f,                        0.0f,             -(p_far + p_near) / (p_far - p_near),       (2.0f * p_far * p_near) / (p_near - p_far) },
+            { 0.0f,                        0.0f,             -1.0f,                                      0.0f                                       }
         }
     };
     
@@ -124,8 +144,26 @@ ms_math_rot(f32 x, f32 y, f32 z, f32 angle_rad)
     return(result);
 }
 
+static struct ms_v3
+ms_math_mv(struct ms_m4 M, struct ms_v3 v)
+{
+    struct ms_v3 result;
+    
+    result.x = M.data[0][0] * v.x + M.data[0][1] * v.y + M.data[0][2] * v.z + M.data[0][3] * 1.0f;
+    result.y = M.data[1][0] * v.x + M.data[1][1] * v.y + M.data[1][2] * v.z + M.data[1][3] * 1.0f;
+    result.z = M.data[2][0] * v.x + M.data[2][1] * v.y + M.data[2][2] * v.z + M.data[2][3] * 1.0f;
+    
+    f32 w = M.data[3][0] * v.x + M.data[3][1] * v.y + M.data[3][2] * v.z + M.data[3][3] * 1.0f;
+    
+    result.x /= w;
+    result.y /= w;
+    result.z /= w;
+    
+    return(result);
+}
+
 static struct ms_m4
-ms_math_mm(struct ms_m4 A, struct ms_m4 B)
+ms_math_mm(struct ms_m4 B, struct ms_m4 A)
 {
     struct ms_m4 result = { 0 };
     
@@ -136,6 +174,16 @@ ms_math_mm(struct ms_m4 A, struct ms_m4 B)
             }
         }
     }
+    
+    return(result);
+}
+
+static struct ms_m4
+ms_math_mm3(struct ms_m4 A, struct ms_m4 B, struct ms_m4 C)
+{
+    struct ms_m4 result;
+    
+    result = ms_math_mm(A, ms_math_mm(B, C));
     
     return(result);
 }

@@ -221,9 +221,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
             s32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, &adj_edges);
             
             if (nadj_faces != nadj_edges) {
-                //new_vert = old_vert;
-#if 1
-                
                 /* This vertex is on an edge of a hole */
                 u32 nedges_adj_to_hole = 0;
                 struct ms_v3 avg_mid_edge_point = { 0 };
@@ -247,7 +244,6 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh)
                 new_vert.x = (avg_mid_edge_point.x + old_vert.x) / (nedges_adj_to_hole + 1);
                 new_vert.y = (avg_mid_edge_point.y + old_vert.y) / (nedges_adj_to_hole + 1);
                 new_vert.z = (avg_mid_edge_point.z + old_vert.z) / (nedges_adj_to_hole + 1);
-#endif
             } else {
                 
                 /* Average of face points of all the faces this vertex is adjacent to */
