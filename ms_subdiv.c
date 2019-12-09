@@ -19,6 +19,8 @@ _verts_equal(struct ms_v3 a, struct ms_v3 b)
 static u32
 _edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v3 end)
 {
+    TracyCZone(__FUNC__, true);
+    
     for (u32 face = 0; face < mesh.primitives; ++face) {
         if (face == me) {
             continue;
@@ -40,9 +42,12 @@ _edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v
         }
         
         if (found_start && found_end) {
+            TracyCZoneEnd(__FUNC__);
             return(face);
         }
     }
+    
+    TracyCZoneEnd(__FUNC__);
     
     return(me);
 }
@@ -50,6 +55,8 @@ _edge_adjacent_face(struct ms_mesh mesh, u32 me, struct ms_v3 start, struct ms_v
 static u32
 _vert_adjacent_faces_repeats(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
 {
+    TracyCZone(__FUNC__, true);
+    
     u32 tr_count = 0;
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
@@ -65,12 +72,16 @@ _vert_adjacent_faces_repeats(struct ms_mesh mesh, struct ms_v3 point, u32 *dest)
         }
     }
     
+    TracyCZoneEnd(__FUNC__);
+    
     return(tr_count);
 }
 
 static u32
 _vert_adjacent_edges_repeats(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 *dest)
 {
+    TracyCZone(__FUNC__, true);
+    
     u32 edge_count = 0;
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
@@ -89,12 +100,16 @@ _vert_adjacent_edges_repeats(struct ms_mesh mesh, struct ms_v3 point, struct ms_
         }
     }
     
+    TracyCZoneEnd(__FUNC__);
+    
     return(edge_count);
 }
 
 static u32
 _find_edge(struct ms_v3 *edges, u32 me)
 {
+    TracyCZone(__FUNC__, true);
+    
     struct ms_v3 me_start = edges[me * 2 + 0];
     struct ms_v3 me_end = edges[me * 2 + 1];
     
@@ -104,16 +119,20 @@ _find_edge(struct ms_v3 *edges, u32 me)
         
         if (_verts_equal(me_start, start) && _verts_equal(me_end, end)) {
             if (edge != me) {
+                TracyCZoneEnd(__FUNC__);
                 return(edge);
             }
         }
         
         if (_verts_equal(me_start, end) && _verts_equal(me_end, start)) {
             if (edge != me) {
+                TracyCZoneEnd(__FUNC__);
                 return(edge);
             }
         }
     }
+    
+    TracyCZoneEnd(__FUNC__);
     
     return(me);
 }
@@ -121,6 +140,8 @@ _find_edge(struct ms_v3 *edges, u32 me)
 static u32
 _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 **dest)
 {
+    TracyCZone(__FUNC__, true);
+    
     /* 
 * Edges can be repeated between faces, but not all of them do (e.g. 
  * edges near a hole only occur once). Here we detect all the duplicates
@@ -148,12 +169,16 @@ _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 **des
     free(edges);
     *dest = edges_no_repeats;
     
+    TracyCZoneEnd(__FUNC__);
+    
     return(nedges_no_repeats);
 }
 
 static u32
 _vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 **dest)
 {
+    TracyCZone(__FUNC__, true);
+    
     /* There are no repeated faces, but just for consistency of the API */
     u32 nfaces = _vert_adjacent_faces_repeats(mesh, point, NULL);
     u32 *faces = malloc(nfaces * sizeof(u32));
@@ -161,17 +186,24 @@ _vert_adjacent_faces(struct ms_mesh mesh, struct ms_v3 point, u32 **dest)
     _vert_adjacent_faces_repeats(mesh, point, faces);
     *dest = faces;
     
+    TracyCZoneEnd(__FUNC__);
+    
     return(nfaces);
 }
 
 static bool
 _vert_special(struct ms_v3 vert, struct ms_v3 *special, u32 nspecial)
 {
+    TracyCZone(__FUNC__, true);
+    
     for (u32 i = 0; i < nspecial; ++i) {
         if (_verts_equal(special[i], vert)) {
+            TracyCZoneEnd(__FUNC__);
             return(true);
         }
     }
+    
+    TracyCZoneEnd(__FUNC__);
     
     return(false);
 }
@@ -179,7 +211,10 @@ _vert_special(struct ms_v3 vert, struct ms_v3 *special, u32 nspecial)
 static struct ms_mesh
 ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial)
 {
+    TracyCZone(__FUNC__, true);
+    
     /* Face points */
+    TracyCZoneN(compute_face_points, "face points", true);
     struct ms_v3 *face_points = malloc(mesh.primitives * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
@@ -197,8 +232,10 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
         
         face_points[face] = fp;
     }
+    TracyCZoneEnd(compute_face_points);
     
     /* Edge points */
+    TracyCZoneN(compute_edge_points, "edge_points", true);
     struct ms_v3 *edge_points = malloc(mesh.primitives * mesh.degree * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
@@ -218,8 +255,10 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
             }
         }
     }
+    TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
+    TracyCZoneN(update_positions, "update old points", true);
     struct ms_v3 *new_verts = malloc(mesh.primitives * mesh.degree * sizeof(struct ms_v3));
     
     for (u32 face = 0; face < mesh.primitives; ++face) {
@@ -305,8 +344,10 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
             new_verts[face * mesh.degree + vert] = new_vert;
         }
     }
+    TracyCZoneEnd(update_positions);
     
     /* Subdivide */
+    TracyCZoneN(subdivide, "do subdivision", true);
     struct ms_mesh new_mesh;
     new_mesh.primitives = mesh.primitives * mesh.degree;
     new_mesh.vertices = malloc(new_mesh.primitives * 4 * sizeof(struct ms_v3));
@@ -372,6 +413,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
             new_mesh.vertices[face * 16 + 15] = edge_point_cd;
         }
     }
+    TracyCZoneEnd(subdivide);
     
     free(new_verts);
     free(face_points);
@@ -379,6 +421,8 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
     
     new_mesh.degree = 4;
     new_mesh.normals = NULL;
+    
+    TracyCZoneEnd(__FUNC__);
     
     return(new_mesh);
 }

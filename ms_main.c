@@ -40,9 +40,7 @@ mousebutton_callback(GLFWwindow* window, int button, int action, int mods)
         state.keys[1024 - GLFW_MOD_SHIFT] = false;
     }
     
-    
     (void) window;
-    (void) mods;
 }
 
 static bool
@@ -261,6 +259,8 @@ main(s32 argc, char *argv[])
         }
         
         ++state.frame;
+        
+        /* TracyCFrameMark; */
         
         glfwSwapBuffers(window);
     }

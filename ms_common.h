@@ -7,6 +7,8 @@
 #include <math.h>    /* for sinf, cosf, tanf */
 #include <ctype.h>   /* for isspace, isalpha etc */
 
+#include "external/tracy/TracyC.h"
+
 typedef int64_t s64;
 typedef int32_t s32;
 typedef int16_t s16;
