@@ -6,6 +6,7 @@
 #include <assert.h>  /* for assert */
 #include <math.h>    /* for sinf, cosf, tanf */
 #include <ctype.h>   /* for isspace, isalpha etc */
+#include <time.h>    /* for clock_gettime */
 
 #include "external/tracy/TracyC.h"
 
@@ -23,6 +24,7 @@ typedef float  f32;
 typedef double f64;
 
 static const f32 ERR = 1e-5f;
+static const f32 PI = 3.1415926f;
 
 struct ms_gl_bufs {
     u32 VAO;

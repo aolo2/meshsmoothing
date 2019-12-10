@@ -1,5 +1,6 @@
 #include "ms_common.h"
 
+#include "ms_time.c"
 #include "ms_file.c"
 #include "ms_opengl.c"
 #include "ms_math.c"
@@ -52,16 +53,28 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
         /* To prevent accidental spamming */
         state.keys[GLFW_KEY_ENTER] = false;
         
-        struct ms_v3 *special_points = malloc(4096 * sizeof(struct ms_v3));
         u32 nspecial = 0;
+        u32 nsp_head = 0;
         
         for (u32 i = 0; i < npoints; ++i) {
             if (state.marked[i]) {
-                special_points[nspecial++] = state.triangulated_points[i];
+                ++nspecial;
             }
         }
         
+        struct ms_v3 *special_points = malloc(nspecial * sizeof(struct ms_v3));
+        
+        for (u32 i = 0; i < npoints; ++i) {
+            if (state.marked[i]) {
+                special_points[nsp_head++] = state.triangulated_points[i];
+            }
+        }
+        
+        u64 vertices = mesh->primitives * mesh->degree;
+        u64 before = usec_now();
         struct ms_mesh new_mesh = ms_subdiv_catmull_clark(*mesh, special_points, nspecial);
+        u64 after = usec_now();
+        
         free(mesh->vertices);
         free(mesh->normals);
         
@@ -69,6 +82,7 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
         *mesh = new_mesh;
         ms_opengl_update_buffers(bufs, &state.triangulated_points, *mesh);
         printf("[INFO] Finished Catmull-Clark [%d]\n", ++state.cc_step);
+        printf("[TIME] %f usec/v\n", (f32) (after - before) / (f32) vertices);
     }
     
     if (state.keys[GLFW_KEY_SPACE]) {
@@ -83,8 +97,8 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
     }
     
     if (!state.keys[GLFW_KEY_LEFT] && !state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = 0.0f; }
-    if (state.keys[GLFW_KEY_LEFT])  { state.rot_angle = 1.0f / 180.0f * M_PI; }
-    if (state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = -1.0f / 180.0f * M_PI; }
+    if (state.keys[GLFW_KEY_LEFT])  { state.rot_angle = 1.0f / 180.0f * PI; }
+    if (state.keys[GLFW_KEY_RIGHT]) { state.rot_angle = -1.0f / 180.0f * PI; }
     if (state.keys[GLFW_KEY_DOWN])  { state.translation += 0.1f; }
     if (state.keys[GLFW_KEY_UP])    { state.translation -= 0.1f; }
     if (state.keys[GLFW_KEY_X])     { state.rotation = X_AXIS; }
