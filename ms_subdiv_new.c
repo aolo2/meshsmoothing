@@ -1,7 +1,9 @@
 #define NOACCEL 0
-#define HASH_PLAIN 1
-#define HASH_LOCAL 0
+#define HASH_PLAIN 0
+#define HASH_LOCAL 1
 #define EXPLICIT 0
+
+#include "ms_vec.c"
 
 #if NOACCEL
 #include "ms_subdiv_noaccel.c"
@@ -38,6 +40,25 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCZoneEnd(construct_hashtable);
 #elif HASH_LOCAL
+    TracyCZoneN(construct_hashtable_lsh, "Construct LSH hash table", true);
+    
+    struct ms_hashsc hashtable = ms_hashtable_init(mesh.nfaces);
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next = (vert + 1) % mesh.degree;
+            
+            int start = mesh.faces[face * mesh.degree + vert];
+            int end = mesh.faces[face * mesh.degree + next];
+            
+            struct ms_v3 startv = mesh.vertices[start];
+            struct ms_v3 endv = mesh.vertices[end];
+            
+            ms_hashtable_insert_lsh(&hashtable, startv, start, end, face);
+            ms_hashtable_insert_lsh(&hashtable, endv, end, start, face);
+        }
+    }
+    
+    TracyCZoneEnd(construct_hashtable_lsh);
 #elif EXPLICIT
 #endif
     
@@ -87,7 +108,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 #if NOACCEL
             int adj = edge_adjacent_face_noaccel(mesh, face, start, end);
 #elif HASH_PLAIN
-            int adj = edge_adjacent_face_hash(&hashtable, face, start, end);
+            int adj = edge_adjacent_face_hash(&hashtable, mesh, face, start, end);
+#elif HASH_LOCAL
+            int adj = edge_adjacent_face_hash(&hashtable, mesh, face, start, end);
 #endif
             
             struct ms_v3 edge_point;
@@ -179,8 +202,12 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_vec adj_faces = vert_adjacent_faces_noaccel(mesh, v);
         struct ms_vec adj_edges = vert_adjacent_edges_noaccel(mesh, v);
 #elif HASH_PLAIN
-        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, v);
-        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, v);
+        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, mesh, v);
+        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, mesh, v);
+#elif HASH_LOCAL
+        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, mesh, v);
+        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, mesh, v);
+        
 #endif
         
         if (adj_faces.len != adj_edges.len / 2) {
@@ -201,8 +228,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 int adj_face = edge_adjacent_face_noaccel(mesh, 0, start, end);
                 int another_adj_face = edge_adjacent_face_noaccel(mesh, adj_face, start, end);
 #elif HASH_PLAIN
-                int adj_face = edge_adjacent_face_hash(&hashtable, 0, start, end);
-                int another_adj_face = edge_adjacent_face_hash(&hashtable, adj_face, start, end);
+                int adj_face = edge_adjacent_face_hash(&hashtable, mesh, 0, start, end);
+                int another_adj_face = edge_adjacent_face_hash(&hashtable, mesh, adj_face, start, end);
+#elif HASH_LOCAL
+                int adj_face = edge_adjacent_face_hash(&hashtable, mesh, 0, start, end);
+                int another_adj_face = edge_adjacent_face_hash(&hashtable, mesh, adj_face, start, end);
 #endif
                 
                 if (adj_face == another_adj_face) {
