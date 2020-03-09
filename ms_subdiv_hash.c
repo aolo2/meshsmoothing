@@ -50,17 +50,19 @@ edge_adjacent_face_hash(struct ms_hashsc *ht, int me, int start, int end)
     struct ht_entry *entry_start = ms_hashtable_find(ht, start);
     struct ht_entry *entry_end = ms_hashtable_find(ht, end);
     
-    for (int f1 = 0; f1 < entry_start->faces.len; ++f1) {
-        int face = entry_start->faces.data[f1];
-        if (face == me) {
-            continue;
-        }
-        
-        for (int f2 = 0; f2 < entry_end->faces.len; ++f2) {
-            int other_face = entry_end->faces.data[f2];
-            if (other_face == face) {
-                TracyCZoneEnd(__FUNC__);
-                return(face);
+    if (entry_start && entry_end) {
+        for (int f1 = 0; f1 < entry_start->faces.len; ++f1) {
+            int face = entry_start->faces.data[f1];
+            if (face == me) {
+                continue;
+            }
+            
+            for (int f2 = 0; f2 < entry_end->faces.len; ++f2) {
+                int other_face = entry_end->faces.data[f2];
+                if (other_face == face) {
+                    TracyCZoneEnd(__FUNC__);
+                    return(face);
+                }
             }
         }
     }

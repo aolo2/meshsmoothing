@@ -30,3 +30,19 @@ traces/cubic_torus_5.tracy
 
 traces/INDEXED_cubic_torus_5.tracy
 ===============================================
+
+
+========= 09.03.20. Separate chaining table (-O2) ====
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.484375 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.390625 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.312500 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 0.352132 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 0.209839 usec/v
+
+traces/INDEXED_cubic_torus_5.tracy
+===============================================
