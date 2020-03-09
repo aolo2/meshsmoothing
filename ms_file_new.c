@@ -4,6 +4,8 @@ ms_file_obj_read_file_new(char *filename)
     FILE *file = fopen(filename, "rb");
     assert(file);
     
+    printf("[INFO] Loaded OBJ file: %s\n", filename);
+    
     int nverts = 0;
     int nfaces = 0;
     char *line = NULL;

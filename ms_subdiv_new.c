@@ -8,6 +8,9 @@
 #elif HASH_PLAIN
 #include "ms_hash.c"
 #include "ms_subdiv_hash.c"
+#elif HASH_LOCAL
+#include "ms_hash.c"
+#include "ms_subdiv_hash.c"
 #endif
 
 static struct ms_mesh
@@ -20,7 +23,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 #elif HASH_PLAIN
     TracyCZoneN(construct_hashtable, "Construct hash table", true);
     
-    struct ms_hashsc hashtable = ms_hashtable_init(1031);
+    struct ms_hashsc hashtable = ms_hashtable_init(mesh.nfaces);
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
             int next = (vert + 1) % mesh.degree;
@@ -29,6 +32,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             int end = mesh.faces[face * mesh.degree + next];
             
             ms_hashtable_insert(&hashtable, start, end, face);
+            ms_hashtable_insert(&hashtable, end, start, face);
         }
     }
     

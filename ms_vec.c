@@ -29,3 +29,24 @@ initial size, and not growing by much */
     
     vec->data[vec->len++] = item;
 }
+
+static void
+ms_vec_unique_push(struct ms_vec *vec, int item)
+{
+    for (int i = 0; i < vec->len; ++i) {
+        if (vec->data[i] == item) {
+            return;
+        }
+    }
+    
+    if (vec->cap == vec->len) {
+        /* Most vertices will have just a few neighbours. Using small 
+initial size, and not growing by much */
+        int new_cap = vec->cap + 2;
+        vec->data = realloc(vec->data, new_cap * sizeof(int));
+        vec->cap = new_cap;
+        assert(vec->data);
+    }
+    
+    vec->data[vec->len++] = item;
+}

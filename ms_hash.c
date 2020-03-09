@@ -49,18 +49,8 @@ ms_hashtable_insert(struct ms_hashsc *ht, int from, int to, int face)
         for (entry = bucket; entry; entry = entry->next) {
             if (entry->key == from) {
                 found_start = true;
-                
-                //bool found_end = false;
-                //for (int i = 0; i < entry->vertices.len; ++i) {
-                //if (entry->vertices.data[i] == to) {
-                //found_end = true;
-                //}
-                //}
-                
-                //if (!found_end) {
-                ms_vec_push(&entry->vertices, to);
-                ms_vec_push(&entry->faces, face);
-                //}
+                ms_vec_unique_push(&entry->vertices, to);
+                ms_vec_unique_push(&entry->faces, face);
             }
         }
         
