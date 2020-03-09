@@ -10,6 +10,7 @@ patterns = {
 
 blacklist_patterns = {
 	".*",
+	"external"
 };
 
 load_paths_base = {

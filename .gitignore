@@ -1,2 +1,7 @@
 res
+external
+build/debug
+build/release
+build/profile
+traces
 .gdb_history

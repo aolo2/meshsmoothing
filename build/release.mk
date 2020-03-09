@@ -1,7 +1,7 @@
 include build/build.mk
 
 CC = gcc
-FILES = ms_main.c external/src/glad.c
+FILES = ms_main_new.c
 BUILD_PATH = build/release
 
 CFLAGS += -march=native -O2

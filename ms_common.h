@@ -10,6 +10,8 @@
 
 #include "external/tracy/TracyC.h"
 
+#define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; } 
+
 typedef int64_t s64;
 typedef int32_t s32;
 typedef int16_t s16;
@@ -26,54 +28,29 @@ typedef double f64;
 static const f32 ERR = 1e-5f;
 static const f32 PI = 3.1415926f;
 
-struct ms_gl_bufs {
-    u32 VAO;
-    u32 VBO;
+struct ms_vec {
+    int *data;
+    int cap;
+    int len;
 };
 
-struct ms_m4 {
-    f32 data[4][4];
-};
-
-#pragma pack(push, 4)
 struct ms_v3 {
     f32 x;
     f32 y;
     f32 z;
 };
-#pragma pack(pop)
+
+struct ms_edgep {
+    struct ms_vec ends;
+    struct ms_vec face_indices;
+    struct ms_vec value_indices;
+};
 
 struct ms_mesh {
-    u8 degree;
-    u32 primitives;
     struct ms_v3 *vertices;
-    struct ms_v3 *normals;
-};
-
-enum rotation_mode {
-    X_AXIS = 0,
-    Y_AXIS = 1,
-    Z_AXIS = 2
-};
-
-struct ms_state {
-    /* User input */
-    bool keys[1024];
-    bool mousedown;
-    f64 cursor[2];
-    f64 cursor_last[2];
-    f64 qx1;
-    f64 qy1;
-    f64 qx2;
-    f64 qy2;
+    int *faces;
     
-    u32 frame;
-    u32 cc_step;
-    f32 scale_factor;
-    f32 translation;
-    f32 rot_angle;
-    enum rotation_mode rotation;
-    
-    struct ms_v3 *triangulated_points;
-    bool *marked;
+    int degree;
+    int nverts;
+    int nfaces;
 };

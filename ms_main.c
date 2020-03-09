@@ -4,7 +4,10 @@
 #include "ms_file.c"
 #include "ms_opengl.c"
 #include "ms_math.c"
+#include "ms_hash.c"
+
 #include "ms_subdiv.c"
+#include "ms_subdiv_new.c"
 
 static struct ms_state state;
 
@@ -72,7 +75,7 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
         
         u64 vertices = mesh->primitives * mesh->degree;
         u64 before = usec_now();
-        struct ms_mesh new_mesh = ms_subdiv_catmull_clark(*mesh, special_points, nspecial);
+        struct ms_mesh new_mesh = ms_subdiv_catmull_clark_slow(*mesh, special_points, nspecial);
         u64 after = usec_now();
         
         free(mesh->vertices);
@@ -82,7 +85,7 @@ update_state(struct ms_mesh *mesh, struct ms_gl_bufs bufs, u32 npoints)
         *mesh = new_mesh;
         ms_opengl_update_buffers(bufs, &state.triangulated_points, *mesh);
         printf("[INFO] Finished Catmull-Clark [%d]\n", ++state.cc_step);
-        printf("[TIME] %f usec/v\n", (f32) (after - before) / (f32) vertices);
+        printf("[TIME] %ld vertices, %f usec/v\n", vertices, (f32) (after - before) / (f32) vertices);
     }
     
     if (state.keys[GLFW_KEY_SPACE]) {
@@ -162,6 +165,9 @@ main(s32 argc, char *argv[])
         mesh = ms_file_stl_read_file(filename);
     } else if (strcmp("obj", extension) == 0) { 
         mesh = ms_file_obj_read_file(filename);
+    } else if (strcmp("obj2", extension) == 0) {
+        struct ms_mesh_new mesh = ms_file_obj_read_file_new(filename);
+        (void) mesh;
     } else {
         fprintf(stderr, "[ERROR] Unknown file extension: .%s\n", extension);
         return(1);
@@ -207,7 +213,6 @@ main(s32 argc, char *argv[])
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glPointSize(8.0f);
     
-    
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -243,9 +248,9 @@ main(s32 argc, char *argv[])
         glBindVertexArray(bufs.VAO);
         glUseProgram(shader_program);
         
-        /* NOTE: OpenGL expects column-major, I use row-major, hence the GL_TRUE for transosition */
+        /* NOTE: OpenGL expects column-major, I use row-major, hence the GL_TRUE for transposition */
         glUniform3f(glGetUniformLocation(shader_program, "color"), color_white.x, color_white.y, color_white.z);
-        glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"), 1, GL_TRUE, (float *) proj.data);
+        glUniformMatrix4fv(glGetUniformLocation(shader_program, "proj"),  1, GL_TRUE, (float *) proj.data);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"),  1, GL_TRUE, (float *) view.data);
         glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_TRUE, (float *) model.data);
         

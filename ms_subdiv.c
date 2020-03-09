@@ -142,11 +142,11 @@ _vert_adjacent_edges(struct ms_mesh mesh, struct ms_v3 point, struct ms_v3 **des
 {
     TracyCZone(__FUNC__, true);
     
-    /* 
-* Edges can be repeated between faces, but not all of them do (e.g. 
- * edges near a hole only occur once). Here we detect all the duplicates
- * and correct the return values
-*/
+    /*
+    * Edges can be repeated between faces, but not all of them do (e.g. 
+    * edges near a hole only occur once). Here we detect all the duplicates
+    * and correct the return values
+    */
     u32 nedges = _vert_adjacent_edges_repeats(mesh, point, NULL);
     u32 nedges_no_repeats = 0;
     struct ms_v3 *edges = malloc(nedges * 2 * sizeof(struct ms_v3));
@@ -209,7 +209,7 @@ _vert_special(struct ms_v3 vert, struct ms_v3 *special, u32 nspecial)
 }
 
 static struct ms_mesh
-ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial)
+ms_subdiv_catmull_clark_slow(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial)
 {
     TracyCZone(__FUNC__, true);
     
@@ -276,7 +276,7 @@ ms_subdiv_catmull_clark(struct ms_mesh mesh, struct ms_v3 *special, u32 nspecial
             s32 nadj_faces = _vert_adjacent_faces(mesh, old_vert, &adj_faces);
             s32 nadj_edges = _vert_adjacent_edges(mesh, old_vert, &adj_edges);
             
-            if (nadj_faces != nadj_edges) {
+            if (true && nadj_faces != nadj_edges) {
                 /* This vertex is on an edge of a hole */
                 u32 nedges_adj_to_hole = 0;
                 struct ms_v3 avg_mid_edge_point = { 0 };

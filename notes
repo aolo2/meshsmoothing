@@ -1,0 +1,31 @@
+========= 08.03.20. Baseline (-O2)
+
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Compiled shaders
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 11.734375 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 20.326822 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 40.531250 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 144.376785 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 567.845032 usec/v
+
+traces/cubic_torus_5.tracy
+=================================
+
+=================================
+construction of acceleration primitive should be taken into account
+=================================
+
+
+
+
+========= 08.03.20. ... (-O2)
+
+[INFO]...
+
+traces/...
+=================================

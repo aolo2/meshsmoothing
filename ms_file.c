@@ -110,9 +110,9 @@ ms_file_obj_read_file(char *filename)
     fseek(file, 0, SEEK_SET);
     
     /* 
-        * Face definition
-        * Read the first number in each slash-separated block
-        */
+    * Face definition
+    * Read the first number in each slash-separated block
+    */
     u32 verts_per_face = 0;
     verts_read = 0;
     
@@ -127,12 +127,13 @@ ms_file_obj_read_file(char *filename)
                 while (*str == ' ' || *str == '\t') { ++str; }
                 
                 s32 index = strtod(str, &str);
-                
-                /* Indices are 1-based, NOT zero based! */
+
+                /* Negative indices mean addressing from the end */
                 if (index < 0) {
                     index = vt_worpts + index;
                 }
                 
+                /* Indices are 1-based, NOT zero based! */                
                 vertices_with_repeats[verts_read] = vertices_without_repeats[index - 1];
                 ++verts_read;
                 ++face_vertices;
@@ -148,7 +149,6 @@ ms_file_obj_read_file(char *filename)
             }
         }
     }
-    
     
     struct ms_mesh mesh;
     
