@@ -11,15 +11,16 @@
 s32
 main(s32 argc, char *argv[])
 {
-    if (argc != 2) {
-        fprintf(stderr, "[ERROR] Usage: %s path/to/model.stl\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "[ERROR] Usage: %s path/to/model.obj ITERATIONS\n", argv[0]);
         return(1);
     }
     
     struct ms_mesh mesh = ms_file_obj_read_file_new(argv[1]);
+    int iterations = atoi(argv[2]);
     char output_filename[512] = { 0 };
     
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < iterations; ++i) {
         
         int size = mesh.nfaces * 4;
         
