@@ -1,112 +1,14 @@
-#define NOACCEL 1
-#define HASH_PLAIN 0
+#define NOACCEL 0
+#define HASH_PLAIN 1
 #define HASH_LOCAL 0
 #define EXPLICIT 0
 
-static struct ms_vec
-vert_adjacent_faces(struct ms_mesh mesh, int vertex)
-{
-    struct ms_vec result = ms_vec_init(4);
-    
 #if NOACCEL
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            if (vertex == mesh.faces[face * mesh.degree + vert]) {
-                ms_vec_push(&result, face);
-            }
-        }
-    }
+#include "ms_subdiv_noaccel.c"
 #elif HASH_PLAIN
-    assert(!"implemented");
-#elif HASH_LOCAL
-    assert(!"implemented");
-#elif EXPLICIT
-    assert(!"implemented");
+#include "ms_hash.c"
+#include "ms_subdiv_hash.c"
 #endif
-    
-    
-    return(result);
-}
-
-
-static struct ms_vec
-vert_adjacent_edges(struct ms_mesh mesh, int vertex)
-{
-    struct ms_vec result = ms_vec_init(4);
-    
-#if NOACCEL
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            if (start > end) { SWAP(start, end); }
-            
-            if (vertex == start || vertex == end) {
-                bool found = false;
-                for (int i = 0; i < result.len / 2; ++i) {
-                    int other_start = result.data[2 * i + 0];
-                    int other_end = result.data[2 * i + 1];
-                    
-                    if (other_start == start && other_end == end) {
-                        found = true;
-                        break;
-                    }
-                }
-                
-                if (!found) {
-                    ms_vec_push(&result, start);
-                    ms_vec_push(&result, end);
-                }
-            }
-        }
-    }
-#elif HASH_PLAIN
-    assert(!"implemented");
-#elif HASH_LOCAL
-    assert(!"implemented");
-#elif EXPLICIT
-    assert(!"implemented");
-#endif
-    
-    
-    return(result);
-}
-
-static int
-edge_adjacent_face(struct ms_mesh mesh, int me, int start, int end)
-{
-#if NOACCEL
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        if (face == me) {
-            continue;
-        }
-        
-        bool found_start = false;
-        bool found_end = false;
-        
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int vertex = mesh.faces[face * mesh.degree + vert];
-            if (vertex == start) { found_start = true; }
-            if (vertex == end)   { found_end = true; }
-        }
-        
-        if (found_start && found_end) {
-            return(face);
-        }
-    }
-#elif HASH_PLAIN
-    assert(!"implemented");
-#elif HASH_LOCAL
-    assert(!"implemented");
-#elif EXPLICIT
-    assert(!"implemented");
-#endif
-    
-    return(me);
-}
 
 static struct ms_mesh
 ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
@@ -117,6 +19,19 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 #if NOACCEL
 #elif HASH_PLAIN
     TracyCZoneN(construct_hashtable, "Construct hash table", true);
+    
+    struct ms_hashsc hashtable = ms_hashtable_init(1031);
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next = (vert + 1) % mesh.degree;
+            
+            int start = mesh.faces[face * mesh.degree + vert];
+            int end = mesh.faces[face * mesh.degree + next];
+            
+            ms_hashtable_insert(&hashtable, start, end, face);
+        }
+    }
+    
     TracyCZoneEnd(construct_hashtable);
 #elif HASH_LOCAL
 #elif EXPLICIT
@@ -147,6 +62,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     /* Edge points */
     TracyCZoneN(compute_edge_points, "edge_points", true);
     
+    TracyCZoneN(edge_point_table, "edge_points construct table", true);
     struct ms_v3 *edge_pointsv = malloc(mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
     struct ms_edgep *edgep_lookup = calloc(1, mesh.nverts * sizeof(struct ms_edgep));
     int nedge_pointsv = 0;
@@ -164,7 +80,12 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[end];
             
-            int adj = edge_adjacent_face(mesh, face, start, end);
+#if NOACCEL
+            int adj = edge_adjacent_face_noaccel(mesh, face, start, end);
+#elif HASH_PLAIN
+            int adj = edge_adjacent_face_hash(&hashtable, face, start, end);
+#endif
+            
             struct ms_v3 edge_point;
             
             if (adj != face) {
@@ -219,7 +140,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
         }
     }
+    TracyCZoneEnd(edge_point_table);
     
+    TracyCZoneN(edge_point_table_convert, "edge_points convert table", true);
     /* Convert lookup 'table' into an array */
     int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
     for (int start = 0; start < mesh.nverts; ++start) {
@@ -236,6 +159,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
         }
     }
+    TracyCZoneEnd(edge_point_table_convert);
+    
     TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
@@ -246,8 +171,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_v3 vertex = mesh.vertices[v];
         struct ms_v3 new_vert;
         
-        struct ms_vec adj_faces = vert_adjacent_faces(mesh, v);
-        struct ms_vec adj_edges = vert_adjacent_edges(mesh, v);
+#if NOACCEL
+        struct ms_vec adj_faces = vert_adjacent_faces_noaccel(mesh, v);
+        struct ms_vec adj_edges = vert_adjacent_edges_noaccel(mesh, v);
+#elif HASH_PLAIN
+        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, v);
+        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, v);
+#endif
         
         if (adj_faces.len != adj_edges.len / 2) {
             /* This vertex is on an edge of a hole */
@@ -263,8 +193,14 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 mid = ms_math_avg(startv, endv);
                 
                 /* Only take into account edges that are also on the edge of a hole */
-                int adj_face = edge_adjacent_face(mesh, 0, start, end);
-                int another_adj_face = edge_adjacent_face(mesh, adj_face, start, end);
+#if NOACCEL
+                int adj_face = edge_adjacent_face_noaccel(mesh, 0, start, end);
+                int another_adj_face = edge_adjacent_face_noaccel(mesh, adj_face, start, end);
+#elif HASH_PLAIN
+                int adj_face = edge_adjacent_face_hash(&hashtable, 0, start, end);
+                int another_adj_face = edge_adjacent_face_hash(&hashtable, adj_face, start, end);
+#endif
+                
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;
                     avg_mid_edge_point.x += mid.x;

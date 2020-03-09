@@ -127,7 +127,7 @@ ms_file_obj_read_file(char *filename)
                 while (*str == ' ' || *str == '\t') { ++str; }
                 
                 s32 index = strtod(str, &str);
-
+                
                 /* Negative indices mean addressing from the end */
                 if (index < 0) {
                     index = vt_worpts + index;
@@ -200,5 +200,3 @@ ms_file_stl_write_file(struct ms_mesh mesh, char *filename)
     
     printf("[INFO] Saved %s\n", filename);
 }
-
-/* TODO: export to obj */

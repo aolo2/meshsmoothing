@@ -4,10 +4,12 @@ ms_vec_init(int size)
     struct ms_vec result = { 0 };
     
     result.cap = size;
-    result.data = malloc(size * sizeof(int));
     result.len = 0;
     
-    assert(result.data);
+    if (size > 0) {
+        result.data = malloc(size * sizeof(int));
+        assert(result.data);
+    }
     
     return(result);
     

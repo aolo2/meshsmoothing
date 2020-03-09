@@ -7,7 +7,7 @@ ms_file_obj_read_file_new(char *filename)
     int nverts = 0;
     int nfaces = 0;
     char *line = NULL;
-    int expected_face_vertices = 4; /* TODO: csr for irregular meshes */
+    int expected_face_vertices = 4; /* TODO: csr for irregular meshes? */
     int read = 0;
     size_t len = 0;
     
