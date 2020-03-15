@@ -22,7 +22,14 @@ main(s32 argc, char *argv[])
         int size = mesh.nfaces * 4;
         
         u64 before = usec_now();
-        mesh = ms_subdiv_catmull_clark_new(mesh);
+        
+        struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+        
+        free(mesh.vertices);
+        free(mesh.faces);
+        
+        mesh = new_mesh;
+        
         u64 after = usec_now();
         
         printf("[INFO] Finished Catmull-Clark [%d]\n", i + 1);
@@ -32,6 +39,9 @@ main(s32 argc, char *argv[])
         output_filename[len] = 0;
         ms_file_obj_write_file_new(output_filename, mesh);
     }
+    
+    free(mesh.vertices);
+    free(mesh.faces);
     
     return(0);
 }

@@ -19,7 +19,7 @@ static void
 ms_vec_push(struct ms_vec *vec, int item)
 {
     if (vec->cap == vec->len) {
-        /* Most vertices will have just a few neighbours. Using small 
+        /* Most vertices will have just a few neighbours. Using small
 initial size, and not growing by much */
         int new_cap = vec->cap + 2;
         vec->data = realloc(vec->data, new_cap * sizeof(int));
@@ -40,7 +40,7 @@ ms_vec_unique_push(struct ms_vec *vec, int item)
     }
     
     if (vec->cap == vec->len) {
-        /* Most vertices will have just a few neighbours. Using small 
+        /* Most vertices will have just a few neighbours. Using small
 initial size, and not growing by much */
         int new_cap = vec->cap + 2;
         vec->data = realloc(vec->data, new_cap * sizeof(int));
@@ -49,4 +49,12 @@ initial size, and not growing by much */
     }
     
     vec->data[vec->len++] = item;
+}
+
+static void
+ms_vec_free(struct ms_vec *vec)
+{
+    vec->cap = 0;
+    vec->len = 0;
+    free(vec->data);
 }

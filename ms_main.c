@@ -163,7 +163,7 @@ main(s32 argc, char *argv[])
     struct ms_mesh mesh = { 0 };
     if (strcmp("stl", extension) == 0) {
         mesh = ms_file_stl_read_file(filename);
-    } else if (strcmp("obj", extension) == 0) { 
+    } else if (strcmp("obj", extension) == 0) {
         mesh = ms_file_obj_read_file(filename);
     } else if (strcmp("obj2", extension) == 0) {
         struct ms_mesh_new mesh = ms_file_obj_read_file_new(filename);
@@ -266,7 +266,7 @@ main(s32 argc, char *argv[])
                 f32 px = projected_points[i].x;
                 f32 py = projected_points[i].y;
                 if (state.qx1 <= px && px <= state.qx2 && state.qy1 <= py && py <= state.qy2) {
-                    state.marked[i] = true; 
+                    state.marked[i] = true;
                 }
             }
         }

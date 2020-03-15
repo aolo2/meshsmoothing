@@ -54,9 +54,9 @@ ms_hashtable_insert_(struct ms_hashsc *ht, int index, int from, int to, int face
         }
         
         if (!found_start) {
-            struct ht_entry *entry = entry_from(from, to, face);
-            entry->next = bucket;
-            ht->buckets[index] = entry;
+            struct ht_entry *new_entry = entry_from(from, to, face);
+            new_entry->next = bucket;
+            ht->buckets[index] = new_entry;
         }
     } else {
         struct ht_entry *entry = entry_from(from, to, face);
@@ -78,7 +78,28 @@ ms_hashtable_find_(struct ms_hashsc *ht, int index, int key)
     return(NULL);
 }
 
-#if HASH_PLAIN
+static void
+ms_hashtable_free(struct ms_hashsc *ht)
+{
+    for (int i = 0; i < ht->width; ++i) {
+        struct ht_entry *entry = ht->buckets[i];
+        while (entry) {
+            struct ht_entry *next = entry->next;
+            
+            ms_vec_free(&entry->vertices);
+            ms_vec_free(&entry->faces);
+            
+            free(entry);
+            
+            entry = next;
+        }
+    }
+    
+    ht->width = 0;
+    free(ht->buckets);
+}
+
+#if ADJACENCY_ACCEL == 1
 static void
 ms_hashtable_insert(struct ms_hashsc *ht, int from, int to, int face)
 {
@@ -93,19 +114,20 @@ ms_hashtable_find(struct ms_hashsc *ht, int key)
     struct ht_entry *result = ms_hashtable_find_(ht, hashcode, key);
     return(result);
 }
-#elif HASH_LOCAL
-static const int LSH_SCALE = 100000;
+#elif ADJACENCY_ACCEL == 2
+static const int LSH_SCALE = 1000;
 static const int LSH_L = 100;
 static const int LSH_P1 = 73856093;
 static const int LSH_P2 = 19349663;
 static const int LSH_P3 = 83492791;
 
 static void
-ms_hashtable_insert_lsh(struct ms_hashsc *ht, struct ms_v3 vertex, int from, int to, int face)
+ms_hashtable_insert(struct ms_hashsc *ht, struct ms_v3 vertex, int from, int to, int face)
 {
     int x = vertex.x * LSH_SCALE / LSH_L;
     int y = vertex.y * LSH_SCALE / LSH_L;
     int z = vertex.z * LSH_SCALE / LSH_L;
+    
     u32 hashcode = (x * LSH_P1) ^ (y * LSH_P2) ^ (z * LSH_P3);
     hashcode %= ht->width;
     
@@ -113,14 +135,17 @@ ms_hashtable_insert_lsh(struct ms_hashsc *ht, struct ms_v3 vertex, int from, int
 }
 
 static struct ht_entry *
-ms_hashtable_find_lsh(struct ms_hashsc *ht, struct ms_v3 vertex, int key)
+ms_hashtable_find(struct ms_hashsc *ht, struct ms_v3 vertex, int key)
 {
     int x = vertex.x * LSH_SCALE / LSH_L;
     int y = vertex.y * LSH_SCALE / LSH_L;
     int z = vertex.z * LSH_SCALE / LSH_L;
+    
     u32 hashcode = (x * LSH_P1) ^ (y * LSH_P2) ^ (z * LSH_P3);
     hashcode %= ht->width;
+    
     struct ht_entry *result = ms_hashtable_find_(ht, hashcode, key);
+    
     return(result);
 }
 #endif

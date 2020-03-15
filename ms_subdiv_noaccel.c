@@ -1,7 +1,25 @@
+static void
+free_hashtable(struct ms_hashsc *ht)
+{
+    (void) ht;
+}
+
+static struct ms_hashsc
+init_hashtable(struct ms_mesh mesh)
+{
+    (void) mesh;
+    
+    struct ms_hashsc result = { 0 };
+    
+    return (result);
+}
+
 static struct ms_vec
-vert_adjacent_faces_noaccel(struct ms_mesh mesh, int vertex)
+vert_adjacent_faces(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
+    
+    (void) ht;
     
     struct ms_vec result = ms_vec_init(4);
     for (int face = 0; face < mesh.nfaces; ++face) {
@@ -18,9 +36,11 @@ vert_adjacent_faces_noaccel(struct ms_mesh mesh, int vertex)
 }
 
 static struct ms_vec
-vert_adjacent_edges_noaccel(struct ms_mesh mesh, int vertex)
+vert_adjacent_vertices(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
+    
+    (void) ht;
     
     struct ms_vec result = ms_vec_init(4);
     for (int face = 0; face < mesh.nfaces; ++face) {
@@ -29,25 +49,16 @@ vert_adjacent_edges_noaccel(struct ms_mesh mesh, int vertex)
             
             int start = mesh.faces[face * mesh.degree + vert];
             int end = mesh.faces[face * mesh.degree + next];
+            int neighbour = -1;
             
-            if (start > end) { SWAP(start, end); }
+            if (vertex == start) {
+                neighbour = end;
+            } else if (vertex == end) {
+                neighbour = start;
+            }
             
-            if (vertex == start || vertex == end) {
-                bool found = false;
-                for (int i = 0; i < result.len / 2; ++i) {
-                    int other_start = result.data[2 * i + 0];
-                    int other_end = result.data[2 * i + 1];
-                    
-                    if (other_start == start && other_end == end) {
-                        found = true;
-                        break;
-                    }
-                }
-                
-                if (!found) {
-                    ms_vec_push(&result, start);
-                    ms_vec_push(&result, end);
-                }
+            if (neighbour != -1) {
+                ms_vec_unique_push(&result, neighbour);
             }
         }
     }
@@ -59,9 +70,11 @@ vert_adjacent_edges_noaccel(struct ms_mesh mesh, int vertex)
 
 
 static int
-edge_adjacent_face_noaccel(struct ms_mesh mesh, int me, int start, int end)
+edge_adjacent_face(struct ms_hashsc *ht, struct ms_mesh mesh, int me, int start, int end)
 {
     TracyCZone(__FUNC__, true);
+    
+    (void) ht;
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         if (face == me) {

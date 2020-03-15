@@ -1,18 +1,16 @@
-#define NOACCEL 0
-#define HASH_PLAIN 0
-#define HASH_LOCAL 1
-#define EXPLICIT 0
+#ifndef ADJACENCY_ACCEL
+#define ADJACENCY_ACCEL 0
+#endif
 
 #include "ms_vec.c"
+#include "ms_hash.c"
 
-#if NOACCEL
+#if ADJACENCY_ACCEL == 0
 #include "ms_subdiv_noaccel.c"
-#elif HASH_PLAIN
-#include "ms_hash.c"
+#elif ADJACENCY_ACCEL == 1 || ADJACENCY_ACCEL == 2
 #include "ms_subdiv_hash.c"
-#elif HASH_LOCAL
-#include "ms_hash.c"
-#include "ms_subdiv_hash.c"
+#else
+#error ADJACENCY_ACCEL must be 0, 1, or 2
 #endif
 
 static struct ms_mesh
@@ -21,46 +19,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZone(__FUNC__, true);
     
     /* Construct acceleration structure */
-#if NOACCEL
-#elif HASH_PLAIN
-    TracyCZoneN(construct_hashtable, "Construct hash table", true);
-    
-    struct ms_hashsc hashtable = ms_hashtable_init(mesh.nfaces);
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            ms_hashtable_insert(&hashtable, start, end, face);
-            ms_hashtable_insert(&hashtable, end, start, face);
-        }
-    }
-    
-    TracyCZoneEnd(construct_hashtable);
-#elif HASH_LOCAL
-    TracyCZoneN(construct_hashtable_lsh, "Construct LSH hash table", true);
-    
-    struct ms_hashsc hashtable = ms_hashtable_init(mesh.nfaces);
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[end];
-            
-            ms_hashtable_insert_lsh(&hashtable, startv, start, end, face);
-            ms_hashtable_insert_lsh(&hashtable, endv, end, start, face);
-        }
-    }
-    
-    TracyCZoneEnd(construct_hashtable_lsh);
-#elif EXPLICIT
-#endif
+    struct ms_hashsc hashtable = init_hashtable(mesh);
     
     /* Face points */
     TracyCZoneN(compute_face_points, "face points", true);
@@ -101,17 +60,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             
             if (start > end) { SWAP(start, end); }
             
-            // TODO: only compute if not found: move to if !found or lem == 0
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[end];
             
-#if NOACCEL
-            int adj = edge_adjacent_face_noaccel(mesh, face, start, end);
-#elif HASH_PLAIN
-            int adj = edge_adjacent_face_hash(&hashtable, mesh, face, start, end);
-#elif HASH_LOCAL
-            int adj = edge_adjacent_face_hash(&hashtable, mesh, face, start, end);
-#endif
+            int adj = edge_adjacent_face(&hashtable, mesh, face, start, end);
             
             struct ms_v3 edge_point;
             
@@ -178,7 +130,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         for (int i = 0; i < slot->ends.len; ++i) {
             int first_index = slot->face_indices.data[i * 2 + 0];
             int second_index = slot->face_indices.data[i * 2 + 1];
-            int value_index = slot->value_indices.data[i]; 
+            int value_index = slot->value_indices.data[i];
             
             edge_points[first_index] = value_index;
             if (second_index != -1) {
@@ -198,42 +150,25 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_v3 vertex = mesh.vertices[v];
         struct ms_v3 new_vert;
         
-#if NOACCEL
-        struct ms_vec adj_faces = vert_adjacent_faces_noaccel(mesh, v);
-        struct ms_vec adj_edges = vert_adjacent_edges_noaccel(mesh, v);
-#elif HASH_PLAIN
-        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, mesh, v);
-        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, mesh, v);
-#elif HASH_LOCAL
-        struct ms_vec adj_faces = vert_adjacent_faces_hash(&hashtable, mesh, v);
-        struct ms_vec adj_edges = vert_adjacent_edges_hash(&hashtable, mesh, v);
+        struct ms_vec adj_faces = vert_adjacent_faces(&hashtable, mesh, v);
+        struct ms_vec adj_verts = vert_adjacent_vertices(&hashtable, mesh, v);
         
-#endif
-        
-        if (adj_faces.len != adj_edges.len / 2) {
+        if (adj_faces.len != adj_verts.len) {
             /* This vertex is on an edge of a hole */
             int nedges_adj_to_hole = 0;
             struct ms_v3 avg_mid_edge_point = { 0 };
             
-            for (int i = 0; i < adj_edges.len / 2; ++i) {
-                int start = adj_edges.data[2 * i + 0];
-                int end = adj_edges.data[2 * i + 1];
+            for (int i = 0; i < adj_verts.len; ++i) {
+                int start = v;
+                int end = adj_verts.data[i];
                 
                 struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
                 struct ms_v3 mid = ms_math_avg(startv, endv);
                 
                 /* Only take into account edges that are also on the edge of a hole */
-#if NOACCEL
-                int adj_face = edge_adjacent_face_noaccel(mesh, 0, start, end);
-                int another_adj_face = edge_adjacent_face_noaccel(mesh, adj_face, start, end);
-#elif HASH_PLAIN
-                int adj_face = edge_adjacent_face_hash(&hashtable, mesh, 0, start, end);
-                int another_adj_face = edge_adjacent_face_hash(&hashtable, mesh, adj_face, start, end);
-#elif HASH_LOCAL
-                int adj_face = edge_adjacent_face_hash(&hashtable, mesh, 0, start, end);
-                int another_adj_face = edge_adjacent_face_hash(&hashtable, mesh, adj_face, start, end);
-#endif
+                int adj_face = edge_adjacent_face(&hashtable, mesh, 0, start, end);
+                int another_adj_face = edge_adjacent_face(&hashtable, mesh, adj_face, start, end);
                 
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;
@@ -260,9 +195,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             
             /* Average of mid points of all the edges this vertex is adjacent to */
             struct ms_v3 avg_mid_edge_point = { 0 };
-            for (int i = 0; i < adj_edges.len / 2; ++i) {
-                int start = adj_edges.data[2 * i + 0];
-                int end = adj_edges.data[2 * i + 1];
+            for (int i = 0; i < adj_verts.len; ++i) {
+                int start = v;
+                int end = adj_verts.data[i];
                 
                 struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
@@ -273,7 +208,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 avg_mid_edge_point.z += mid.z;
             }
             
-            f32 norm_coeff = 1.0f / (adj_edges.len / 2.0f);
+            f32 norm_coeff = 1.0f / adj_verts.len;
             avg_mid_edge_point.x *= norm_coeff;
             avg_mid_edge_point.y *= norm_coeff;
             avg_mid_edge_point.z *= norm_coeff;
@@ -288,6 +223,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             new_vert.y = w1 * vertex.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
             new_vert.z = w1 * vertex.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
         }
+        
+#if ADJACENCY_ACCEL == 0
+        ms_vec_free(&adj_faces);
+        ms_vec_free(&adj_verts);
+#endif
         
         new_verts[v] = new_vert;
     }
@@ -360,9 +300,20 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     TracyCZoneEnd(subdivide);
     
+    free_hashtable(&hashtable);
+    
+    free(edge_pointsv);
     free(new_verts);
     free(face_points);
     free(edge_points);
+    
+    for (int i = 0; i < mesh.nverts; ++i) {
+        ms_vec_free(&edgep_lookup[i].ends);
+        ms_vec_free(&edgep_lookup[i].face_indices);
+        ms_vec_free(&edgep_lookup[i].value_indices);
+    }
+    
+    free(edgep_lookup);
     
     TracyCZoneEnd(__FUNC__);
     

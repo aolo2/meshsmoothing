@@ -1,15 +1,73 @@
+static void
+free_hashtable(struct ms_hashsc *ht)
+{
+    ms_hashtable_free(ht);
+}
+
+static struct ms_hashsc
+init_hashtable(struct ms_mesh mesh)
+{
+    struct ms_hashsc hashtable = { 0 };
+    TracyCZone(__FUNC__, true);
+    
+#if ADJACENCY_ACCEL == 1
+    hashtable = ms_hashtable_init(mesh.nfaces);
+    
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next = (vert + 1) % mesh.degree;
+            
+            int start = mesh.faces[face * mesh.degree + vert];
+            int end = mesh.faces[face * mesh.degree + next];
+            
+            ms_hashtable_insert(&hashtable, start, end, face);
+            ms_hashtable_insert(&hashtable, end, start, face);
+        }
+    }
+#elif ADJACENCY_ACCEL == 2
+    hashtable = ms_hashtable_init(mesh.nfaces);
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next = (vert + 1) % mesh.degree;
+            
+            int start = mesh.faces[face * mesh.degree + vert];
+            int end = mesh.faces[face * mesh.degree + next];
+            
+            struct ms_v3 startv = mesh.vertices[start];
+            struct ms_v3 endv = mesh.vertices[end];
+            
+            ms_hashtable_insert(&hashtable, startv, start, end, face);
+            ms_hashtable_insert(&hashtable, endv, end, start, face);
+        }
+    }
+#endif
+    
+    TracyCZoneEnd(__FUNC__);
+    
+    return (hashtable);
+}
+
+static inline struct ht_entry *
+_find(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+{
+    struct ht_entry *entry;
+    
+#if ADJACENCY_ACCEL == 1
+    (void) mesh;
+    entry = ms_hashtable_find(ht, vertex);
+#elif ADJACENCY_ACCEL == 2
+    entry = ms_hashtable_find(ht, mesh.vertices[vertex], vertex);
+#endif
+    
+    return(entry);
+}
+
 static struct ms_vec
-vert_adjacent_faces_hash(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+vert_adjacent_faces(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
     
-#if HASH_PLAIN
-    (void) mesh;
-    struct ht_entry *entry = ms_hashtable_find(ht, vertex);
-#elif HASH_LOCAL
-    struct ht_entry *entry = ms_hashtable_find_lsh(ht, mesh.vertices[vertex], vertex);
-#endif
-    
+    struct ht_entry *entry = _find(ht, mesh, vertex);
     struct ms_vec result = ms_vec_init(0);
     
     if (entry) {
@@ -23,29 +81,15 @@ vert_adjacent_faces_hash(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 
 
 static struct ms_vec
-vert_adjacent_edges_hash(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+vert_adjacent_vertices(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
     
-#if HASH_PLAIN
-    (void) mesh;
-    struct ht_entry *entry = ms_hashtable_find(ht, vertex);
-#elif HASH_LOCAL
-    struct ht_entry *entry = ms_hashtable_find_lsh(ht, mesh.vertices[vertex], vertex);
-#endif
-    
-    struct ms_vec result = ms_vec_init(4);
+    struct ht_entry *entry = _find(ht, mesh, vertex);
+    struct ms_vec result = ms_vec_init(0);
     
     if (entry) {
-        for (int v = 0; v < entry->vertices.len; ++v) {
-            int start = vertex;
-            int end = entry->vertices.data[v];
-            
-            if (start > end) { SWAP(start, end); }
-            
-            ms_vec_push(&result, start);
-            ms_vec_push(&result, end);
-        }
+        result = entry->vertices;
     }
     
     TracyCZoneEnd(__FUNC__);
@@ -55,20 +99,12 @@ vert_adjacent_edges_hash(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 
 
 static int
-edge_adjacent_face_hash(struct ms_hashsc *ht, struct ms_mesh mesh, int me, int start, int end)
+edge_adjacent_face(struct ms_hashsc *ht, struct ms_mesh mesh, int me, int start, int end)
 {
     TracyCZone(__FUNC__, true);
     
-#if HASH_PLAIN
-    (void) mesh;
-    struct ht_entry *entry_start = ms_hashtable_find(ht, start);
-    struct ht_entry *entry_end = ms_hashtable_find(ht, end);
-#elif HASH_LOCAL
-    struct ms_v3 startv = mesh.vertices[start];
-    struct ms_v3 endv = mesh.vertices[end];
-    struct ht_entry *entry_start = ms_hashtable_find_lsh(ht, startv, start);
-    struct ht_entry *entry_end = ms_hashtable_find_lsh(ht, endv, end);
-#endif
+    struct ht_entry *entry_start = _find(ht, mesh, start);
+    struct ht_entry *entry_end = _find(ht, mesh, end);
     
     if (entry_start && entry_end) {
         for (int f1 = 0; f1 < entry_start->faces.len; ++f1) {

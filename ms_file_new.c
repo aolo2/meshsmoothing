@@ -55,7 +55,7 @@ ms_file_obj_read_file_new(char *filename)
         }
     }
     
-    /* 
+    /*
     * Face definition
     * Read the first number in each slash-separated block
     */
@@ -77,7 +77,7 @@ ms_file_obj_read_file_new(char *filename)
                     index = nverts + index;
                 }
                 
-                /* Indices are 1-based, NOT zero based! */                
+                /* Indices are 1-based, NOT zero based! */
                 faces[indices_read] = index - 1;
                 ++face_vertices;
                 ++indices_read;
@@ -89,6 +89,8 @@ ms_file_obj_read_file_new(char *filename)
             assert(face_vertices == expected_face_vertices);
         }
     }
+    
+    free(line);
     
     fclose(file);
     
@@ -115,8 +117,8 @@ ms_file_obj_write_file_new(char *filename, struct ms_mesh mesh)
     }
     
     for (int f = 0; f < mesh.nfaces; ++f) {
-        fprintf(file, "f %d %d %d %d\n", 
-                mesh.faces[f * 4 + 0] + 1, mesh.faces[f * 4 + 1] + 1, 
+        fprintf(file, "f %d %d %d %d\n",
+                mesh.faces[f * 4 + 0] + 1, mesh.faces[f * 4 + 1] + 1,
                 mesh.faces[f * 4 + 2] + 1, mesh.faces[f * 4 + 3] + 1);
     }
     

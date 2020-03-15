@@ -1,4 +1,4 @@
-static struct ms_v3
+static inline struct ms_v3
 ms_math_avg(struct ms_v3 a, struct ms_v3 b)
 {
     struct ms_v3 result;
