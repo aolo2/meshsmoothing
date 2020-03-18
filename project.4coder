@@ -5,7 +5,8 @@ project_name = "Mesh smoothing";
 patterns = {
 	"*.c",
 	"*.h",
-	"*.4coder"
+	"*.4coder",
+	"*.mk"
 };
 
 blacklist_patterns = {
@@ -22,25 +23,25 @@ load_paths = {
 };
 
 command_list = {
-	{ 
+	{
 		.name = "build debug",
-   	 .out = "*compilation*", 
+   	 .out = "*compilation*",
 		.footer_panel = false,
 		.save_dirty_files = true,
 		.cursor_at_end = false,
 	    .cmd = {{ "make debug", .os = "linux" }},
     },
-	{ 
+	{
 		.name = "build release",
-   	 .out = "*compilation*", 
+   	 .out = "*compilation*",
 		.footer_panel = false,
 		.save_dirty_files = true,
 		.cursor_at_end = false,
 	    .cmd = {{ "make release", .os = "linux" }},
     },
-	{ 
+	{
 		.name = "inspect",
-   	 .out = "*compilation*", 
+   	 .out = "*compilation*",
 		.footer_panel = false,
 		.save_dirty_files = true,
 		.cursor_at_end = false,

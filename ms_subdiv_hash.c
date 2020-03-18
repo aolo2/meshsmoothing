@@ -1,13 +1,19 @@
+static inline void
+free_results_vec(struct ms_vec *vec)
+{
+    (void) vec;
+}
+
 static void
-free_hashtable(struct ms_hashsc *ht)
+free_hashtable(struct ms_accel *ht)
 {
     ms_hashtable_free(ht);
 }
 
-static struct ms_hashsc
+static struct ms_accel
 init_hashtable(struct ms_mesh mesh)
 {
-    struct ms_hashsc hashtable = { 0 };
+    struct ms_accel hashtable = { 0 };
     TracyCZone(__FUNC__, true);
     
 #if ADJACENCY_ACCEL == 1
@@ -48,7 +54,7 @@ init_hashtable(struct ms_mesh mesh)
 }
 
 static inline struct ht_entry *
-_find(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+_find(struct ms_accel *ht, struct ms_mesh mesh, int vertex)
 {
     struct ht_entry *entry;
     
@@ -63,7 +69,7 @@ _find(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 }
 
 static struct ms_vec
-vert_adjacent_faces(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+vert_adjacent_faces(struct ms_accel *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
     
@@ -81,7 +87,7 @@ vert_adjacent_faces(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 
 
 static struct ms_vec
-vert_adjacent_vertices(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
+vert_adjacent_vertices(struct ms_accel *ht, struct ms_mesh mesh, int vertex)
 {
     TracyCZone(__FUNC__, true);
     
@@ -99,7 +105,7 @@ vert_adjacent_vertices(struct ms_hashsc *ht, struct ms_mesh mesh, int vertex)
 
 
 static int
-edge_adjacent_face(struct ms_hashsc *ht, struct ms_mesh mesh, int me, int start, int end)
+edge_adjacent_face(struct ms_accel *ht, struct ms_mesh mesh, int me, int start, int end)
 {
     TracyCZone(__FUNC__, true);
     

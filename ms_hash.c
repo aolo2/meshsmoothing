@@ -5,15 +5,15 @@ struct ht_entry {
     struct ms_vec faces;
 };
 
-struct ms_hashsc {
+struct ms_accel {
     struct ht_entry **buckets;
     int width;
 };
 
-static struct ms_hashsc
+static struct ms_accel
 ms_hashtable_init(int size)
 {
-    struct ms_hashsc result = { 0 };
+    struct ms_accel result = { 0 };
     
     result.buckets = calloc(1, size * sizeof(struct ht_entry *));
     result.width = size;
@@ -38,7 +38,7 @@ entry_from(int from, int to, int face)
 }
 
 static void
-ms_hashtable_insert_(struct ms_hashsc *ht, int index, int from, int to, int face)
+ms_hashtable_insert_(struct ms_accel *ht, int index, int from, int to, int face)
 {
     struct ht_entry *bucket = ht->buckets[index];
     
@@ -65,7 +65,7 @@ ms_hashtable_insert_(struct ms_hashsc *ht, int index, int from, int to, int face
 }
 
 static struct ht_entry *
-ms_hashtable_find_(struct ms_hashsc *ht, int index, int key)
+ms_hashtable_find_(struct ms_accel *ht, int index, int key)
 {
     struct ht_entry *bucket = ht->buckets[index];
     
@@ -79,7 +79,7 @@ ms_hashtable_find_(struct ms_hashsc *ht, int index, int key)
 }
 
 static void
-ms_hashtable_free(struct ms_hashsc *ht)
+ms_hashtable_free(struct ms_accel *ht)
 {
     for (int i = 0; i < ht->width; ++i) {
         struct ht_entry *entry = ht->buckets[i];
@@ -101,14 +101,14 @@ ms_hashtable_free(struct ms_hashsc *ht)
 
 #if ADJACENCY_ACCEL == 1
 static void
-ms_hashtable_insert(struct ms_hashsc *ht, int from, int to, int face)
+ms_hashtable_insert(struct ms_accel *ht, int from, int to, int face)
 {
     u32 hashcode = from % ht->width; // TODO
     ms_hashtable_insert_(ht, hashcode, from, to, face);
 }
 
 static struct ht_entry *
-ms_hashtable_find(struct ms_hashsc *ht, int key)
+ms_hashtable_find(struct ms_accel *ht, int key)
 {
     u32 hashcode = key % ht->width; // TODO
     struct ht_entry *result = ms_hashtable_find_(ht, hashcode, key);
@@ -122,7 +122,7 @@ static const int LSH_P2 = 19349663;
 static const int LSH_P3 = 83492791;
 
 static void
-ms_hashtable_insert(struct ms_hashsc *ht, struct ms_v3 vertex, int from, int to, int face)
+ms_hashtable_insert(struct ms_accel *ht, struct ms_v3 vertex, int from, int to, int face)
 {
     int x = vertex.x * LSH_SCALE / LSH_L;
     int y = vertex.y * LSH_SCALE / LSH_L;
@@ -135,7 +135,7 @@ ms_hashtable_insert(struct ms_hashsc *ht, struct ms_v3 vertex, int from, int to,
 }
 
 static struct ht_entry *
-ms_hashtable_find(struct ms_hashsc *ht, struct ms_v3 vertex, int key)
+ms_hashtable_find(struct ms_accel *ht, struct ms_v3 vertex, int key)
 {
     int x = vertex.x * LSH_SCALE / LSH_L;
     int y = vertex.y * LSH_SCALE / LSH_L;

@@ -2,13 +2,17 @@
 #define ADJACENCY_ACCEL 0
 #endif
 
+struct ms_accel;
+
 #include "ms_vec.c"
-#include "ms_hash.c"
 
 #if ADJACENCY_ACCEL == 0
 #include "ms_subdiv_noaccel.c"
 #elif ADJACENCY_ACCEL == 1 || ADJACENCY_ACCEL == 2
+#include "ms_hash.c"
 #include "ms_subdiv_hash.c"
+#elif ADJACENCY_ACCEL == 3
+#include "ms_subdiv_linear.c"
 #else
 #error ADJACENCY_ACCEL must be 0, 1, or 2
 #endif
@@ -19,7 +23,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZone(__FUNC__, true);
     
     /* Construct acceleration structure */
-    struct ms_hashsc hashtable = init_hashtable(mesh);
+    struct ms_accel accel = init_hashtable(mesh);
     
     /* Face points */
     TracyCZoneN(compute_face_points, "face points", true);
@@ -63,7 +67,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[end];
             
-            int adj = edge_adjacent_face(&hashtable, mesh, face, start, end);
+            int adj = edge_adjacent_face(&accel, mesh, face, start, end);
             
             struct ms_v3 edge_point;
             
@@ -150,8 +154,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_v3 vertex = mesh.vertices[v];
         struct ms_v3 new_vert;
         
-        struct ms_vec adj_faces = vert_adjacent_faces(&hashtable, mesh, v);
-        struct ms_vec adj_verts = vert_adjacent_vertices(&hashtable, mesh, v);
+        struct ms_vec adj_faces = vert_adjacent_faces(&accel, mesh, v);
+        struct ms_vec adj_verts = vert_adjacent_vertices(&accel, mesh, v);
         
         if (adj_faces.len != adj_verts.len) {
             /* This vertex is on an edge of a hole */
@@ -167,8 +171,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 mid = ms_math_avg(startv, endv);
                 
                 /* Only take into account edges that are also on the edge of a hole */
-                int adj_face = edge_adjacent_face(&hashtable, mesh, 0, start, end);
-                int another_adj_face = edge_adjacent_face(&hashtable, mesh, adj_face, start, end);
+                int adj_face = edge_adjacent_face(&accel, mesh, 0, start, end);
+                int another_adj_face = edge_adjacent_face(&accel, mesh, adj_face, start, end);
                 
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;
@@ -224,10 +228,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             new_vert.z = w1 * vertex.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
         }
         
-#if ADJACENCY_ACCEL == 0
-        ms_vec_free(&adj_faces);
-        ms_vec_free(&adj_verts);
-#endif
+        free_results_vec(&adj_faces);
+        free_results_vec(&adj_verts);
         
         new_verts[v] = new_vert;
     }
@@ -300,7 +302,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     TracyCZoneEnd(subdivide);
     
-    free_hashtable(&hashtable);
+    free_hashtable(&accel);
     
     free(edge_pointsv);
     free(new_verts);
