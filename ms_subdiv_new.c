@@ -62,7 +62,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             int start = mesh.faces[face * mesh.degree + vert];
             int end = mesh.faces[face * mesh.degree + next_vert];
             
-            if (start > end) { SWAP(start, end); }
+            if (start > end) { SWAP(start, end) }
             
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[end];
@@ -83,11 +83,24 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             struct ms_edgep *slot = edgep_lookup + start;
             int face_index = face * mesh.degree + vert;
             
-            if (slot->ends.len == 0) {
+            bool found = false;
+            for (int i = 0; i < slot->ends.len; ++i) {
+                if (slot->ends.data[i] == end) {
+                    /* Second neighbour. This edge point is already added */
+                    slot->face_indices.data[i * 2 + 1] = face_index;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (slot->ends.len == 0 || !found) {
                 /* This is the first edge starting at this vertex */
-                slot->ends = ms_vec_init(4);
-                slot->value_indices = ms_vec_init(4);
-                slot->face_indices = ms_vec_init(4);
+                if (slot->ends.len == 0) {
+                    slot->ends = ms_vec_init(4);
+                    slot->value_indices = ms_vec_init(4);
+                    slot->face_indices = ms_vec_init(4);
+                }
+                
                 ms_vec_push(&slot->ends, end);
                 ms_vec_push(&slot->value_indices, nedge_pointsv);
                 
@@ -97,29 +110,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 
                 edge_pointsv[nedge_pointsv] = edge_point;
                 ++nedge_pointsv;
-            } else {
-                /* There are other edges starting at this vertex */
-                bool found = false;
-                for (int i = 0; i < slot->ends.len; ++i) {
-                    if (slot->ends.data[i] == end) {
-                        /* Second neighbour. This edge point is already added */
-                        slot->face_indices.data[i * 2 + 1] = face_index;
-                        found = true;
-                        break;
-                    }
-                }
-                
-                if (!found) {
-                    ms_vec_push(&slot->ends, end);
-                    ms_vec_push(&slot->value_indices, nedge_pointsv);
-                    
-                    /* One of two neighbours */
-                    ms_vec_push(&slot->face_indices, face_index);
-                    ms_vec_push(&slot->face_indices, -1);
-                    
-                    edge_pointsv[nedge_pointsv] = edge_point;
-                    ++nedge_pointsv;
-                }
             }
         }
     }
@@ -132,11 +122,16 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_edgep *slot = edgep_lookup + start;
         
         for (int i = 0; i < slot->ends.len; ++i) {
+            
+            
+            // all the misses here
             int first_index = slot->face_indices.data[i * 2 + 0];
             int second_index = slot->face_indices.data[i * 2 + 1];
             int value_index = slot->value_indices.data[i];
-            
             edge_points[first_index] = value_index;
+            /////////////////
+            
+            
             if (second_index != -1) {
                 edge_points[second_index] = value_index;
             }

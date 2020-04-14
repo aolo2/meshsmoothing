@@ -19,8 +19,10 @@ init_hashtable(struct ms_mesh mesh)
     
     TracyCZone(__FUNC__, true);
     
+    TracyCZoneN(count_unique, "count unique neighbours", true);
     struct ms_vec *verts = calloc(1, mesh.nverts * sizeof(struct ms_vec));
     struct ms_vec *faces = calloc(1, mesh.nverts * sizeof(struct ms_vec));
+    
     
     // NOTE: count everything to allocate memory
     for (int face = 0; face < mesh.nfaces; ++face) {
@@ -37,7 +39,9 @@ init_hashtable(struct ms_mesh mesh)
             ms_vec_unique_push(faces + end, face);
         }
     }
+    TracyCZoneEnd(count_unique);
     
+    TracyCZoneN(fill_starts, "create first CSR array", true);
     int total_faces = 0;
     int total_verts = 0;
     
@@ -50,7 +54,9 @@ init_hashtable(struct ms_mesh mesh)
         verts_starts[v + 1] = total_verts;
         faces_starts[v + 1] = total_faces;
     }
+    TracyCZoneEnd(fill_starts);
     
+    TracyCZoneN(fill_matrix, "create second CSR array", true);
     int *verts_matrix = malloc(total_verts * sizeof(int));
     int *faces_matrix = malloc(total_faces * sizeof(int));
     
@@ -66,6 +72,7 @@ init_hashtable(struct ms_mesh mesh)
             verts_matrix[verts_from + i] = verts[v].data[i];
         }
     }
+    TracyCZoneEnd(fill_matrix);
     
     struct ms_accel result = { 0 };
     
@@ -73,6 +80,7 @@ init_hashtable(struct ms_mesh mesh)
     result.verts_starts = verts_starts;
     result.faces_matrix = faces_matrix;
     result.verts_matrix = verts_matrix;
+    
     
     TracyCZoneEnd(__FUNC__);
     

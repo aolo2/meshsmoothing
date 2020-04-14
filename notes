@@ -45,6 +45,13 @@ traces/INDEXED_cubic_torus_5.tracy
 [INFO] Finished Catmull-Clark [5]
 [TIME] 49152 vertices, 0.144491 usec/v
 
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 0.173579 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 0.208380 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 0.219517 usec/v
+
 traces/HASHSC_cubic_torus_5.tracy
 ===============================================
 
@@ -64,3 +71,34 @@ traces/HASHSC_cubic_torus_5.tracy
 
 traces/LSH_cubic_torus_5.tracy
 ===============================================
+
+
+========= 18.03.20. Explicit ajdacency info (-O2)
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.463542 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.346354 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.299479 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 0.250651 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 0.118510 usec/v
+
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 0.133586 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 0.139140 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 0.144132 usec/v
+
+traces/EXPLICIT_cubic_torus_5.tracy
+===============================================
+
+
+======= 14.04.20 Working on edge points ====
+
+
+simplify edge points table somehow... (found many DC misses via uProf)
+remove ms_vecs everywhere (found many samples)

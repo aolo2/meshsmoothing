@@ -4,13 +4,12 @@
 #include <stdbool.h> /* for bool, true, false */
 #include <string.h>  /* for memset */
 #include <assert.h>  /* for assert */
-#include <math.h>    /* for sinf, cosf, tanf */
 #include <ctype.h>   /* for isspace, isalpha etc */
 #include <time.h>    /* for clock_gettime */
 
 #include "external/tracy/TracyC.h"
 
-#define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; } 
+#define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; }
 
 typedef int64_t s64;
 typedef int32_t s32;
@@ -24,9 +23,6 @@ typedef uint8_t  u8;
 
 typedef float  f32;
 typedef double f64;
-
-static const f32 ERR = 1e-5f;
-static const f32 PI = 3.1415926f;
 
 struct ms_vec {
     int *data;
