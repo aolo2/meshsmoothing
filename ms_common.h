@@ -50,3 +50,14 @@ struct ms_mesh {
     int nverts;
     int nfaces;
 };
+
+struct ms_accel {
+    int *faces_starts;
+    int *verts_starts;
+    
+    int *faces_count;
+    int *verts_count;
+    
+    int *faces_matrix;
+    int *verts_matrix;
+};

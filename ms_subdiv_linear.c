@@ -1,93 +1,9 @@
-#define OLD_INIT 0
-
-// NOTE: csr.
-
-struct ms_accel {
-    int *faces_starts;
-    int *verts_starts;
-    
-    int *faces_count;
-    int *verts_count;
-    
-    int *faces_matrix;
-    int *verts_matrix;
-};
-
-// TODO: if we converge on this implementation as the fastest, we shouldn't
-// return ms_vec's?
-
 // init accel structure
 static struct ms_accel
 init_hashtable(struct ms_mesh mesh)
 {
-    // TODO: is there a faster way of detecting duplicates?
-    
     TracyCZone(__FUNC__, true);
     
-#if OLD_INIT
-    TracyCZoneN(count_unique, "count unique neighbours", true);
-    struct ms_vec *verts = calloc(1, mesh.nverts * sizeof(struct ms_vec));
-    struct ms_vec *faces = calloc(1, mesh.nverts * sizeof(struct ms_vec));
-    
-    
-    // NOTE: count everything to allocate memory
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            ms_vec_unique_push(verts + start, end);
-            ms_vec_unique_push(verts + end, start);
-            
-            ms_vec_unique_push(faces + start, face);
-            ms_vec_unique_push(faces + end, face);
-        }
-    }
-    TracyCZoneEnd(count_unique);
-    
-    
-    TracyCZoneN(fill_starts, "create first CSR array", true);
-    int total_faces = 0;
-    int total_verts = 0;
-    
-    int *verts_starts = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    int *faces_starts = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
-        total_verts += verts[v].len;
-        total_faces += faces[v].len;
-        verts_starts[v + 1] = total_verts;
-        faces_starts[v + 1] = total_faces;
-    }
-    TracyCZoneEnd(fill_starts);
-    
-    TracyCZoneN(fill_matrix, "create second CSR array", true);
-    int *verts_matrix = malloc(total_verts * sizeof(int));
-    int *faces_matrix = malloc(total_faces * sizeof(int));
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
-        int verts_from = verts_starts[v];
-        int faces_from = faces_starts[v];
-        
-        for (int i = 0; i < faces[v].len; ++i) {
-            faces_matrix[faces_from + i] = faces[v].data[i];
-        }
-        
-        for (int i = 0; i < verts[v].len; ++i) {
-            verts_matrix[verts_from + i] = verts[v].data[i];
-        }
-    }
-    TracyCZoneEnd(fill_matrix);
-    
-    struct ms_accel result = { 0 };
-    
-    result.faces_starts = faces_starts;
-    result.verts_starts = verts_starts;
-    result.faces_matrix = faces_matrix;
-    result.verts_matrix = verts_matrix;
-#else
     /*
 Attempt at a more cache friendly CSR constriction routine.
  First count upper limit on array lengths. Then collapse dublicates (leaves holes)
@@ -212,7 +128,6 @@ Attempt at a more cache friendly CSR constriction routine.
     result.verts_count = edges_accum;
     result.faces_matrix = faces;
     result.verts_matrix = edges;
-#endif
     
     TracyCZoneEnd(__FUNC__);
     
@@ -221,19 +136,14 @@ Attempt at a more cache friendly CSR constriction routine.
 
 // find all faces of vert
 static struct ms_vec
-vert_adjacent_faces(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
+vert_adjacent_faces(struct ms_accel *accel, int vertex)
 {
     //TracyCZone(__FUNC__, true);
-    (void) mesh;
     
     struct ms_vec result = { 0 };
     
     int from = accel->faces_starts[vertex];
-#if OLD_INIT
-    int to = accel->faces_starts[vertex + 1];
-#else
     int to = accel->faces_starts[vertex] + accel->faces_count[vertex];
-#endif
     
     result.len = to - from;
     result.cap = to - from;
@@ -247,21 +157,14 @@ vert_adjacent_faces(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 
 // find all verts of vert
 static struct ms_vec
-vert_adjacent_vertices(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
+vert_adjacent_vertices(struct ms_accel *accel, int vertex)
 {
     //TracyCZone(__FUNC__, true);
-    
-    (void) mesh;
     
     struct ms_vec result = { 0 };
     
     int from = accel->verts_starts[vertex];
-    
-#if OLD_INIT
-    int to = accel->verts_starts[vertex + 1];
-#else
     int to = accel->verts_starts[vertex] + accel->verts_count[vertex];
-#endif
     
     result.len = to - from;
     result.cap = to - from;
@@ -273,22 +176,10 @@ vert_adjacent_vertices(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 }
 
 static int
-edge_adjacent_face(struct ms_accel *accel, struct ms_mesh mesh, int me, int start, int end)
+edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
 {
     //TracyCZone(__FUNC__, true);
     
-    (void) mesh;
-    
-#if OLD_INIT
-    int start_faces_from = accel->faces_starts[start];
-    int start_faces_to = accel->faces_starts[start + 1];
-    
-    int end_faces_from = accel->faces_starts[end];
-    int end_faces_to = accel->faces_starts[end + 1];
-    
-    int nfaces_start = start_faces_to - start_faces_from;
-    int nfaces_end = end_faces_to - end_faces_from;
-#else
     int start_faces_from = accel->faces_starts[start];
     int end_faces_from = accel->faces_starts[end];
     
@@ -297,7 +188,6 @@ edge_adjacent_face(struct ms_accel *accel, struct ms_mesh mesh, int me, int star
     
     int start_faces_to = start_faces_from + nfaces_start;
     int end_faces_to = end_faces_from + nfaces_end;
-#endif
     
     int *faces = accel->faces_matrix;
     
@@ -323,15 +213,15 @@ edge_adjacent_face(struct ms_accel *accel, struct ms_mesh mesh, int me, int star
     return(me);
 }
 
-// free
 static void
-free_results_vec(struct ms_vec *vec)
+free_accel(struct ms_accel *accel)
 {
-    (void) vec;
-}
-
-static void
-free_hashtable(struct ms_accel *ht)
-{
-    (void) ht;
+    free(accel->faces_starts);
+    free(accel->verts_starts);
+    
+    free(accel->faces_count);
+    free(accel->verts_count);
+    
+    free(accel->faces_matrix);
+    free(accel->verts_matrix);
 }

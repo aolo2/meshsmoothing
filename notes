@@ -127,7 +127,7 @@ remove ms_vecs everywhere (found many samples)
 [TIME] 3145728 vertices, 755.658020 msec, 0.240217 usec/v
 ===============================================
 
-========== 15.04.20 Edges binned by start ====
+========== 15.04.20 Edges binned by start (try to remove cache misses caused by vectors) ====
 [INFO] Loaded OBJ file: res/cubic_torus.obj
 [INFO] Finished Catmull-Clark [1]
 [TIME] 192 vertices, 0.084000 msec, 0.437500 usec/v
@@ -175,7 +175,7 @@ forgot to add early-out on edge points table construction >.<
 
 now lets try to fix the csr construction (get rid of vectors)
 
-===
+=== (try to remove move cache misses caused by vectors)
 [INFO] Loaded OBJ file: res/cubic_torus.obj
 [INFO] Finished Catmull-Clark [1]
 [TIME] 192 vertices, 0.056000 msec, 0.291667 usec/v
