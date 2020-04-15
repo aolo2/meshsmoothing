@@ -134,47 +134,6 @@ Attempt at a more cache friendly CSR constriction routine.
     return(result);
 }
 
-// find all faces of vert
-static struct ms_vec
-vert_adjacent_faces(struct ms_accel *accel, int vertex)
-{
-    //TracyCZone(__FUNC__, true);
-    
-    struct ms_vec result = { 0 };
-    
-    int from = accel->faces_starts[vertex];
-    int to = accel->faces_starts[vertex] + accel->faces_count[vertex];
-    
-    result.len = to - from;
-    result.cap = to - from;
-    result.data = accel->faces_matrix + from;
-    
-    //TracyCZoneEnd(__FUNC__);
-    
-    return(result);
-}
-
-
-// find all verts of vert
-static struct ms_vec
-vert_adjacent_vertices(struct ms_accel *accel, int vertex)
-{
-    //TracyCZone(__FUNC__, true);
-    
-    struct ms_vec result = { 0 };
-    
-    int from = accel->verts_starts[vertex];
-    int to = accel->verts_starts[vertex] + accel->verts_count[vertex];
-    
-    result.len = to - from;
-    result.cap = to - from;
-    result.data = accel->verts_matrix + from;
-    
-    //TracyCZoneEnd(__FUNC__);
-    
-    return(result);
-}
-
 static int
 edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
 {
@@ -186,19 +145,16 @@ edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
     int nfaces_start = accel->faces_count[start];
     int nfaces_end = accel->faces_count[end];
     
-    int start_faces_to = start_faces_from + nfaces_start;
-    int end_faces_to = end_faces_from + nfaces_end;
-    
     int *faces = accel->faces_matrix;
     
     if (nfaces_start > 0 && nfaces_end > 0) {
-        for (int f1 = start_faces_from; f1 < start_faces_to; ++f1) {
+        for (int f1 = start_faces_from; f1 < start_faces_from + nfaces_start; ++f1) {
             int face = faces[f1];
             if (face == me) {
                 continue;
             }
             
-            for (int f2 = end_faces_from; f2 < end_faces_to; ++f2) {
+            for (int f2 = end_faces_from; f2 < end_faces_from + nfaces_end; ++f2) {
                 int other_face = faces[f2];
                 if (other_face == face) {
                     //TracyCZoneEnd(__FUNC__);

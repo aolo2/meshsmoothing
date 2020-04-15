@@ -197,3 +197,27 @@ now lets try to fix the csr construction (get rid of vectors)
 uprof params: res/cube_hole.obj_8.obj 3
 IBS DC miss 5000 (old) -> 2615 (new)
 ===
+
+
+===
+do not returns ms_vec's from vert_adjacent_xxx
+
+[INFO] Loading OBJ file: res/cubic_torus.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj.
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.064000 msec, 0.333333 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.147000 msec, 0.191406 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.417000 msec, 0.135742 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 1.584000 msec, 0.128906 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 6.458000 msec, 0.131388 usec/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 12.155000 msec, 0.061824 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 64.042000 msec, 0.081434 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 309.907013 msec, 0.098517 usec/v
+===
