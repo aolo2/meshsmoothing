@@ -97,8 +97,52 @@ traces/EXPLICIT_cubic_torus_5.tracy
 ===============================================
 
 
-======= 14.04.20 Working on edge points ====
+[[[[======= 14.04.20 Working on edge points ====]]]]]
 
 
 simplify edge points table somehow... (found many DC misses via uProf)
 remove ms_vecs everywhere (found many samples)
+
+
+
+
+
+========= 15.04.20. Edge sort (-O2)
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.120000 msec, 0.625000 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.323000 msec, 0.420573 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 1.210000 msec, 0.393880 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 4.896000 msec, 0.398438 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 13.337000 msec, 0.271342 usec/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 36.897999 msec, 0.187673 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 168.087997 msec, 0.213735 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 755.658020 msec, 0.240217 usec/v
+===============================================
+
+========== 15.04.20 Edges binned by start ====
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.084000 msec, 0.437500 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.215000 msec, 0.279948 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.685000 msec, 0.222982 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 2.840000 msec, 0.231120 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 8.861000 msec, 0.180278 usec/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 22.534000 msec, 0.114614 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 95.678001 msec, 0.121661 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 410.333008 msec, 0.130441 usec/v
+===============================================

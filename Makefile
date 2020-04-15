@@ -9,8 +9,12 @@ release:
 	@+make -f build/release.mk all --no-print-directory
 
 profile:
-	@echo "[INFO] PROFILE build (tracy)"
+	@echo "[INFO] PROFILE build (tracy, full)"
 	@+make -f build/profile.mk all --no-print-directory
+
+profile_fast:
+	@echo "[INFO] PROFILE build (tracy, fast)"
+	@+make -f build/profile.mk fast --no-print-directory
 
 .PHONY:
 	all debug release profile

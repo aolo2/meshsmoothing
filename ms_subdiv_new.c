@@ -17,6 +17,24 @@ struct ms_accel;
 #error ADJACENCY_ACCEL must be 0, 1, or 2
 #endif
 
+static int
+compare_edges(const void *pa, const void *pb)
+{
+    const int *s1 = pa;
+    const int *s2 = pb;
+    
+    int diff = *s1 - *s2;
+    
+    if (diff) {
+        return(diff);
+    }
+    
+    const int *e1 = s1 + 1;
+    const int *e2 = s2 + 1;
+    
+    return(*e1 - *e2);
+}
+
 static struct ms_mesh
 ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 {
@@ -49,7 +67,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     /* Edge points */
     TracyCZoneN(compute_edge_points, "edge_points", true);
-    
+#if 0
     TracyCZoneN(edge_point_table, "edge_points construct table", true);
     struct ms_v3 *edge_pointsv = malloc(mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
     struct ms_edgep *edgep_lookup = calloc(1, mesh.nverts * sizeof(struct ms_edgep));
@@ -64,21 +82,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             
             if (start > end) { SWAP(start, end) }
             
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[end];
-            
             int adj = edge_adjacent_face(&accel, mesh, face, start, end);
-            
-            struct ms_v3 edge_point;
-            
-            if (adj != face) {
-                struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
-                struct ms_v3 edge_avg = ms_math_avg(startv, endv);
-                edge_point = ms_math_avg(face_avg, edge_avg);
-            } else {
-                /* This is an edge of a hole */
-                edge_point = ms_math_avg(startv, endv);
-            }
             
             struct ms_edgep *slot = edgep_lookup + start;
             int face_index = face * mesh.degree + vert;
@@ -107,6 +111,19 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 /* One of two neighbours */
                 ms_vec_push(&slot->face_indices, face_index);
                 ms_vec_push(&slot->face_indices, -1);
+                
+                struct ms_v3 edge_point;
+                struct ms_v3 startv = mesh.vertices[start];
+                struct ms_v3 endv = mesh.vertices[end];
+                
+                if (adj != face) {
+                    struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
+                    struct ms_v3 edge_avg = ms_math_avg(startv, endv);
+                    edge_point = ms_math_avg(face_avg, edge_avg);
+                } else {
+                    /* This is an edge of a hole */
+                    edge_point = ms_math_avg(startv, endv);
+                }
                 
                 edge_pointsv[nedge_pointsv] = edge_point;
                 ++nedge_pointsv;
@@ -138,7 +155,173 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
     }
     TracyCZoneEnd(edge_point_table_convert);
+#elif 0
+    TracyCZoneN(collect_edges, "collect all edges", true);
+    int nedges = 0;
+    int *arr = malloc(mesh.nfaces * mesh.degree * 4 * sizeof(int));
     
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next_vert = (vert + 1) % mesh.degree;
+            
+            int edge = face * mesh.degree + vert;
+            int start = mesh.faces[edge];
+            int end = mesh.faces[face * mesh.degree + next_vert];
+            
+            if (start > end) { SWAP(start, end) }
+            
+            arr[nedges * 4 + 0] = start;
+            arr[nedges * 4 + 1] = end;
+            arr[nedges * 4 + 2] = edge;
+            arr[nedges * 4 + 3] = face;
+            
+            ++nedges;
+        }
+    }
+    
+    TracyCZoneEnd(collect_edges);
+    
+    TracyCZoneN(sort_edges, "sort edges", true);
+    qsort(arr, nedges, 4 * sizeof(int), compare_edges);
+    TracyCZoneEnd(sort_edges);
+    
+    
+    TracyCZoneN(find_unique_edges, "create unique edge points", true);
+    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
+    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
+    int nedge_pointsv = 0;
+    
+    int prev_start = -1;
+    int prev_end = -1;
+    
+    for (int e = 0; e < nedges; ++e) {
+        int start = arr[e * 4 + 0];
+        int end   = arr[e * 4 + 1];
+        int edge  = arr[e * 4 + 2];
+        int face  = arr[e * 4 + 3];
+        
+        if (prev_start != start || prev_end != end) {
+            struct ms_v3 edge_point;
+            struct ms_v3 startv = mesh.vertices[start];
+            struct ms_v3 endv = mesh.vertices[end];
+            
+            int adj = edge_adjacent_face(&accel, mesh, face, start, end);
+            
+            if (adj != face) {
+                struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
+                struct ms_v3 edge_avg = ms_math_avg(startv, endv);
+                edge_point = ms_math_avg(face_avg, edge_avg);
+            } else {
+                /* This is an edge of a hole */
+                edge_point = ms_math_avg(startv, endv);
+            }
+            
+            edge_pointsv[nedge_pointsv] = edge_point;
+            edge_points[edge] = nedge_pointsv;
+            ++nedge_pointsv;
+        } else {
+            edge_points[edge] = nedge_pointsv - 1;
+        }
+        
+        prev_start = start;
+        prev_end = end;
+    }
+    
+    
+    TracyCZoneEnd(find_unique_edges);
+#else
+    int *end_counts = calloc(1, (mesh.nverts + 1) * sizeof(int));
+    int nedges = 0;
+    
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int edge = face * mesh.degree + vert;
+            int next_vert = (vert + 1) % mesh.degree;
+            int start = mesh.faces[edge];
+            int end = mesh.faces[face * mesh.degree + next_vert];
+            if (start > end) { SWAP(start, end) }
+            
+            end_counts[start + 1] += 1;
+            
+            ++nedges;
+        }
+    }
+    
+    int *accum = calloc(1, mesh.nverts * sizeof(int));
+    int *ends = malloc(nedges * sizeof(int));
+    int *edges = malloc(nedges * sizeof(int));
+    int *faces = malloc(nedges * sizeof(int));
+    
+    for (int v = 1; v < mesh.nverts + 1; ++v) {
+        end_counts[v] += end_counts[v - 1];
+    }
+    
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int edge = face * mesh.degree + vert;
+            int next_vert = (vert + 1) % mesh.degree;
+            int start = mesh.faces[edge];
+            int end = mesh.faces[face * mesh.degree + next_vert];
+            
+            if (start > end) { SWAP(start, end) }
+            
+            int count = accum[start];
+            int base = end_counts[start];
+            
+            faces[base + count] = face;
+            ends[base + count] = end;
+            edges[base + count] = edge;
+            
+            accum[start]++;
+        }
+    }
+    
+    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
+    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
+    int nedge_pointsv = 0;
+    
+    for (int start = 0; start < mesh.nverts; ++start) {
+        int from = end_counts[start];
+        int to = end_counts[start + 1];
+        
+        for (int e = from; e < to; ++e) {
+            int face = faces[e];
+            int edge = edges[e];
+            int end = ends[e];
+            
+            int found = -1;
+            for (int e2 = from; e2 < e; ++e2) {
+                if (ends[e2] == end) {
+                    int edge2 = edges[e2];
+                    found = edge_points[edge2];
+                }
+            }
+            
+            if (found == -1) {
+                struct ms_v3 edge_point;
+                struct ms_v3 startv = mesh.vertices[start];
+                struct ms_v3 endv = mesh.vertices[end];
+                
+                int adj = edge_adjacent_face(&accel, mesh, face, start, end);
+                
+                if (adj != face) {
+                    struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
+                    struct ms_v3 edge_avg = ms_math_avg(startv, endv);
+                    edge_point = ms_math_avg(face_avg, edge_avg);
+                } else {
+                    /* This is an edge of a hole */
+                    edge_point = ms_math_avg(startv, endv);
+                }
+                
+                edge_pointsv[nedge_pointsv] = edge_point;
+                edge_points[edge] = nedge_pointsv;
+                ++nedge_pointsv;
+            } else {
+                edge_points[edge] = found;
+            }
+        }
+    }
+#endif
     TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
@@ -304,13 +487,15 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     free(face_points);
     free(edge_points);
     
+#if 0
     for (int i = 0; i < mesh.nverts; ++i) {
         ms_vec_free(&edgep_lookup[i].ends);
         ms_vec_free(&edgep_lookup[i].face_indices);
         ms_vec_free(&edgep_lookup[i].value_indices);
     }
-    
     free(edgep_lookup);
+#endif
+    
     
     TracyCZoneEnd(__FUNC__);
     

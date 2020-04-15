@@ -91,7 +91,7 @@ init_hashtable(struct ms_mesh mesh)
 static struct ms_vec
 vert_adjacent_faces(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 {
-    TracyCZone(__FUNC__, true);
+    //TracyCZone(__FUNC__, true);
     
     (void) mesh;
     
@@ -104,7 +104,7 @@ vert_adjacent_faces(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
     result.cap = to - from;
     result.data = accel->faces_matrix + from;
     
-    TracyCZoneEnd(__FUNC__);
+    //TracyCZoneEnd(__FUNC__);
     
     return(result);
 }
@@ -114,7 +114,7 @@ vert_adjacent_faces(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 static struct ms_vec
 vert_adjacent_vertices(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 {
-    TracyCZone(__FUNC__, true);
+    //TracyCZone(__FUNC__, true);
     
     (void) mesh;
     
@@ -127,7 +127,7 @@ vert_adjacent_vertices(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
     result.cap = to - from;
     result.data = accel->verts_matrix + from;
     
-    TracyCZoneEnd(__FUNC__);
+    //TracyCZoneEnd(__FUNC__);
     
     return(result);
 }
@@ -135,7 +135,7 @@ vert_adjacent_vertices(struct ms_accel *accel, struct ms_mesh mesh, int vertex)
 static int
 edge_adjacent_face(struct ms_accel *accel, struct ms_mesh mesh, int me, int start, int end)
 {
-    TracyCZone(__FUNC__, true);
+    //TracyCZone(__FUNC__, true);
     
     (void) mesh;
     
@@ -160,14 +160,14 @@ edge_adjacent_face(struct ms_accel *accel, struct ms_mesh mesh, int me, int star
             for (int f2 = end_faces_from; f2 < end_faces_to; ++f2) {
                 int other_face = faces[f2];
                 if (other_face == face) {
-                    TracyCZoneEnd(__FUNC__);
+                    //TracyCZoneEnd(__FUNC__);
                     return(face);
                 }
             }
         }
     }
     
-    TracyCZoneEnd(__FUNC__);
+    //TracyCZoneEnd(__FUNC__);
     
     return(me);
 }
