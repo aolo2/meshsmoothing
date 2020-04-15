@@ -145,4 +145,55 @@ remove ms_vecs everywhere (found many samples)
 [TIME] 786432 vertices, 95.678001 msec, 0.121661 usec/v
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 410.333008 msec, 0.130441 usec/v
+
+
+uprof params: res/cube_hole.obj_8.obj 3
+IBS DC miss 6700 (old) -> 5000 (new)
 ===============================================
+
+forgot to add early-out on edge points table construction >.<
+
+===
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.066000 msec, 0.343750 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.160000 msec, 0.208333 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.539000 msec, 0.175456 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 2.104000 msec, 0.171224 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 5.228000 msec, 0.106364 usec/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 19.131001 msec, 0.097305 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 83.037003 msec, 0.105587 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 394.186005 msec, 0.125308 usec/v
+===
+
+now lets try to fix the csr construction (get rid of vectors)
+
+===
+[INFO] Loaded OBJ file: res/cubic_torus.obj
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 0.056000 msec, 0.291667 usec/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 0.157000 msec, 0.204427 usec/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 0.379000 msec, 0.123372 usec/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 1.442000 msec, 0.117350 usec/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 6.363000 msec, 0.129456 usec/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 15.557000 msec, 0.079127 usec/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 65.281998 msec, 0.083010 usec/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 319.458008 msec, 0.101553 usec/v
+
+uprof params: res/cube_hole.obj_8.obj 3
+IBS DC miss 5000 (old) -> 2615 (new)
+===

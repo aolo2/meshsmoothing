@@ -155,81 +155,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
     }
     TracyCZoneEnd(edge_point_table_convert);
-#elif 0
-    TracyCZoneN(collect_edges, "collect all edges", true);
-    int nedges = 0;
-    int *arr = malloc(mesh.nfaces * mesh.degree * 4 * sizeof(int));
-    
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next_vert = (vert + 1) % mesh.degree;
-            
-            int edge = face * mesh.degree + vert;
-            int start = mesh.faces[edge];
-            int end = mesh.faces[face * mesh.degree + next_vert];
-            
-            if (start > end) { SWAP(start, end) }
-            
-            arr[nedges * 4 + 0] = start;
-            arr[nedges * 4 + 1] = end;
-            arr[nedges * 4 + 2] = edge;
-            arr[nedges * 4 + 3] = face;
-            
-            ++nedges;
-        }
-    }
-    
-    TracyCZoneEnd(collect_edges);
-    
-    TracyCZoneN(sort_edges, "sort edges", true);
-    qsort(arr, nedges, 4 * sizeof(int), compare_edges);
-    TracyCZoneEnd(sort_edges);
-    
-    
-    TracyCZoneN(find_unique_edges, "create unique edge points", true);
-    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
-    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
-    int nedge_pointsv = 0;
-    
-    int prev_start = -1;
-    int prev_end = -1;
-    
-    for (int e = 0; e < nedges; ++e) {
-        int start = arr[e * 4 + 0];
-        int end   = arr[e * 4 + 1];
-        int edge  = arr[e * 4 + 2];
-        int face  = arr[e * 4 + 3];
-        
-        if (prev_start != start || prev_end != end) {
-            struct ms_v3 edge_point;
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[end];
-            
-            int adj = edge_adjacent_face(&accel, mesh, face, start, end);
-            
-            if (adj != face) {
-                struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
-                struct ms_v3 edge_avg = ms_math_avg(startv, endv);
-                edge_point = ms_math_avg(face_avg, edge_avg);
-            } else {
-                /* This is an edge of a hole */
-                edge_point = ms_math_avg(startv, endv);
-            }
-            
-            edge_pointsv[nedge_pointsv] = edge_point;
-            edge_points[edge] = nedge_pointsv;
-            ++nedge_pointsv;
-        } else {
-            edge_points[edge] = nedge_pointsv - 1;
-        }
-        
-        prev_start = start;
-        prev_end = end;
-    }
-    
-    
-    TracyCZoneEnd(find_unique_edges);
 #else
+    TracyCZoneN(edge_point_bin, "bin edges by start", true);
     int *end_counts = calloc(1, (mesh.nverts + 1) * sizeof(int));
     int nedges = 0;
     
@@ -247,14 +174,16 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
     }
     
+    for (int v = 1; v < mesh.nverts + 1; ++v) {
+        end_counts[v] += end_counts[v - 1];
+    }
+    
+    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
     int *accum = calloc(1, mesh.nverts * sizeof(int));
     int *ends = malloc(nedges * sizeof(int));
     int *edges = malloc(nedges * sizeof(int));
     int *faces = malloc(nedges * sizeof(int));
-    
-    for (int v = 1; v < mesh.nverts + 1; ++v) {
-        end_counts[v] += end_counts[v - 1];
-    }
+    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
@@ -276,8 +205,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
     }
     
-    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
-    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
+    TracyCZoneEnd(edge_point_bin);
+    
+    
+    TracyCZoneN(edge_points_compute, "compute unique edge points", true);
     int nedge_pointsv = 0;
     
     for (int start = 0; start < mesh.nverts; ++start) {
@@ -294,6 +225,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 if (ends[e2] == end) {
                     int edge2 = edges[e2];
                     found = edge_points[edge2];
+                    break;
                 }
             }
             
@@ -321,6 +253,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
         }
     }
+    TracyCZoneEnd(edge_points_compute);
 #endif
     TracyCZoneEnd(compute_edge_points);
     
