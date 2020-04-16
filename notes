@@ -221,3 +221,34 @@ do not returns ms_vec's from vert_adjacent_xxx
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 309.907013 msec, 0.098517 usec/v
 ===
+
+
+
+----- switch to cycles per vertex (with rdtsc)
+005dd548e79fa86ce68c570116cd995f19ab7fe4 (old CSR)
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 2307695456 cycles, 733.596619 cycles/v
+
+a937297c2b58f227038df21c1621d6b9676f5d94 (edge binning)
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 1267254528 cycles, 402.849365 cycles/v
+
+5f3f66e0bdb0ba7d16d7d2e777923e7a5e5f0c75 (ms_vecs + cleanup)
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 1023658720 cycles, 325.412354 cycles/v
+-----
+
+
+-- tigth packing of adjacency CSR --
+./build/profile/ms res/cubic_torus.obj_7.obj 1
+with:
+	- init acceleration struct = 112ms
+	- edge points = 153ms
+	- update old points = 40ms
+~305 cycles/v
+without:
+	- init acceleration struct = 107ms
+	- edge points = 167ms
+	- update old points = 42s
+~315 cycles/v
+----

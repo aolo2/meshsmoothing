@@ -1,13 +1,9 @@
-// init accel structure
+// init accel structure (two CSRs)
 static struct ms_accel
-init_hashtable(struct ms_mesh mesh)
+init_acceleration_struct(struct ms_mesh mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    /*
-Attempt at a more cache friendly CSR constriction routine.
- First count upper limit on array lengths. Then collapse dublicates (leaves holes)
-*/
     int *edges_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
     int *faces_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
     
@@ -120,14 +116,45 @@ Attempt at a more cache friendly CSR constriction routine.
         }
     }
     
+    /* Tighter! */
+    int edges_head = 0;
+    int faces_head = 0;
+    
+    for (int v = 0; v < mesh.nverts; ++v) {
+        int e_from = edges_from[v];
+        int e_count = edges_accum[v];
+        
+        edges_from[v] = edges_head;
+        
+        for (int i = 0; i < e_count; ++i) {
+            edges[edges_head++] = edges[e_from + i];
+        }
+    }
+    
+    edges_from[mesh.nverts] = edges_head;
+    
+    for (int v = 0; v < mesh.nverts; ++v) {
+        int f_from = faces_from[v];
+        int f_count = faces_accum[v];
+        
+        faces_from[v] = faces_head;
+        
+        for (int i = 0; i < f_count; ++i) {
+            faces[faces_head++] = faces[f_from + i];
+        }
+    }
+    
+    faces_from[mesh.nverts] = faces_head;
+    
     struct ms_accel result = { 0 };
     
     result.faces_starts = faces_from;
     result.verts_starts = edges_from;
-    result.faces_count = faces_accum;
-    result.verts_count = edges_accum;
     result.faces_matrix = faces;
     result.verts_matrix = edges;
+    
+    free(faces_accum);
+    free(edges_accum);
     
     TracyCZoneEnd(__FUNC__);
     
@@ -142,19 +169,22 @@ edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
     int start_faces_from = accel->faces_starts[start];
     int end_faces_from = accel->faces_starts[end];
     
-    int nfaces_start = accel->faces_count[start];
-    int nfaces_end = accel->faces_count[end];
+    int start_faces_to = accel->faces_starts[start + 1];
+    int end_faces_to = accel->faces_starts[end + 1];
+    
+    int nfaces_start = start_faces_to - start_faces_from;
+    int nfaces_end = end_faces_to - end_faces_from;
     
     int *faces = accel->faces_matrix;
     
     if (nfaces_start > 0 && nfaces_end > 0) {
-        for (int f1 = start_faces_from; f1 < start_faces_from + nfaces_start; ++f1) {
+        for (int f1 = start_faces_from; f1 < start_faces_to; ++f1) {
             int face = faces[f1];
             if (face == me) {
                 continue;
             }
             
-            for (int f2 = end_faces_from; f2 < end_faces_from + nfaces_end; ++f2) {
+            for (int f2 = end_faces_from; f2 < end_faces_to; ++f2) {
                 int other_face = faces[f2];
                 if (other_face == face) {
                     //TracyCZoneEnd(__FUNC__);
@@ -170,13 +200,13 @@ edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
 }
 
 static void
-free_accel(struct ms_accel *accel)
+free_acceleration_struct(struct ms_accel *accel)
 {
     free(accel->faces_starts);
     free(accel->verts_starts);
     
-    free(accel->faces_count);
-    free(accel->verts_count);
+    //free(accel->faces_count);
+    //free(accel->verts_count);
     
     free(accel->faces_matrix);
     free(accel->verts_matrix);

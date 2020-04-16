@@ -6,7 +6,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZone(__FUNC__, true);
     
     /* Construct acceleration structure */
-    struct ms_accel accel = init_hashtable(mesh);
+    struct ms_accel accel = init_acceleration_struct(mesh);
     
     /* Face points */
     TracyCZoneN(compute_face_points, "face points", true);
@@ -145,8 +145,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         int adj_verts_base = accel.verts_starts[v];
         int adj_faces_base = accel.faces_starts[v];
         
-        int adj_verts_count = accel.verts_count[v];
-        int adj_faces_count = accel.faces_count[v];
+        int adj_verts_count = accel.verts_starts[v + 1] - adj_verts_base;
+        int adj_faces_count = accel.faces_starts[v + 1] - adj_faces_base;
         
         f32 one_over_adj_faces_count = 1.0f / adj_faces_count;
         
@@ -293,7 +293,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     TracyCZoneEnd(subdivide);
     
-    free_accel(&accel);
+    free_acceleration_struct(&accel);
     
     free(end_counts);
     

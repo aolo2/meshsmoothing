@@ -27,23 +27,22 @@ main(s32 argc, char *argv[])
         
         int size = mesh.nfaces * 4;
         
-        u64 before = usec_now();
-        
+        u64 before = cycles_now();
         struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+        u64 after = cycles_now();
         
         free(mesh.vertices);
         free(mesh.faces);
         
         mesh = new_mesh;
         
-        u64 after = usec_now();
         u64 total = after - before;
         
         if (fortex) {
             printf("\t(%d, %f)\n", size, total / 1000.0f);
         } else {
             printf("[INFO] Finished Catmull-Clark [%d]\n", i + 1);
-            printf("[TIME] %d vertices, %f msec, %f usec/v\n", size, total / 1000.0f, total / (f32) size);
+            printf("[TIME] %d vertices, %lu cycles, %f cycles/v\n", size, total, total / (f32) size);
         }
         
         int len = snprintf(output_filename, 512, "%s_%d.obj", argv[1], i + 1);

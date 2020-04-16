@@ -40,6 +40,14 @@ command_list = {
 	    .cmd = {{ "make release", .os = "linux" }},
     },
 	{
+		.name = "build profile fast",
+   	 .out = "*compilation*",
+		.footer_panel = false,
+		.save_dirty_files = true,
+		.cursor_at_end = false,
+	    .cmd = {{ "make profile_fast", .os = "linux" }},
+    },
+	{
 		.name = "inspect",
    	 .out = "*compilation*",
 		.footer_panel = false,
@@ -51,4 +59,4 @@ command_list = {
 	      
 fkey_command[1] = "build debug";
 fkey_command[2] = "build release";
-fkey_command[3] = "inspect";
+fkey_command[3] = "build profile fast";

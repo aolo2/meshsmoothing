@@ -7,7 +7,13 @@
 #include <ctype.h>   /* for isspace, isalpha etc */
 #include <time.h>    /* for clock_gettime */
 
+#ifdef PROFILE
 #include "external/tracy/TracyC.h"
+#else
+#define TracyCZone(a, b)
+#define TracyCZoneN(a, b, c)
+#define TracyCZoneEnd(a)
+#endif
 
 #define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; }
 
@@ -55,8 +61,8 @@ struct ms_accel {
     int *faces_starts;
     int *verts_starts;
     
-    int *faces_count;
-    int *verts_count;
+    //int *faces_count;
+    //int *verts_count;
     
     int *faces_matrix;
     int *verts_matrix;
