@@ -30,22 +30,10 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
-struct ms_vec {
-    int *data;
-    int cap;
-    int len;
-};
-
 struct ms_v3 {
     f32 x;
     f32 y;
     f32 z;
-};
-
-struct ms_edgep {
-    struct ms_vec ends;
-    struct ms_vec face_indices;
-    struct ms_vec value_indices;
 };
 
 struct ms_mesh {
@@ -61,9 +49,11 @@ struct ms_accel {
     int *faces_starts;
     int *verts_starts;
     
-    //int *faces_count;
-    //int *verts_count;
+    int *edge_indices;
     
     int *faces_matrix;
     int *verts_matrix;
+    
+    int *verts_starts_repeats;
+    int *verts_matrix_repeats;
 };

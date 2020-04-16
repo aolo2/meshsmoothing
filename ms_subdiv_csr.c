@@ -4,8 +4,11 @@ init_acceleration_struct(struct ms_mesh mesh)
 {
     TracyCZone(__FUNC__, true);
     
+    TracyCZoneN(count_initial_offsets, "alloc and count all edges", true);
     int *edges_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
     int *faces_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
+    
+    int *edges_from_repeats = calloc(1, (mesh.nverts + 1) * sizeof(int));
     
     int nedges = 0;
     int nfaces = 0;
@@ -20,6 +23,9 @@ init_acceleration_struct(struct ms_mesh mesh)
             edges_from[start + 1]++;
             edges_from[end + 1]++;
             
+            edges_from_repeats[start + 1]++;
+            edges_from_repeats[end + 1]++;
+            
             faces_from[start + 1]++;
             faces_from[end + 1]++;
             
@@ -30,25 +36,55 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     for (int v = 1; v < mesh.nverts + 1; ++v) {
         edges_from[v] += edges_from[v - 1];
+        edges_from_repeats[v] += edges_from_repeats[v - 1];
         faces_from[v] += faces_from[v - 1];
     }
+    TracyCZoneEnd(count_initial_offsets);
     
+    TracyCZoneN(count_unique_edges, "alloc and count unique edges", true);
     int *edges = malloc(nedges * sizeof(int));
     int *faces = malloc(nfaces * sizeof(int));
     
     int *edges_accum = calloc(1, mesh.nverts * sizeof(int));
     int *faces_accum = calloc(1, mesh.nverts * sizeof(int));
     
+    int *edges_repeats = malloc(nedges * sizeof(int));
+    int *edges_accum_repeats = calloc(1, mesh.nverts * sizeof(int));
+    
+    int *edge_indices = malloc(nedges * sizeof(int));
+    int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
+    
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
             int next = (vert + 1) % mesh.degree;
             
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
+            int start_edge_index = face * mesh.degree + vert;
+            int end_edge_index = face * mesh.degree + next;
+            
+            int start = mesh.faces[start_edge_index];
+            int end = mesh.faces[end_edge_index];
             
             /* edge start */
             int edge_base = edges_from[start];
             int edge_count = edges_accum[start];
+            
+            int edge_base_repeats = edges_from_repeats[start];
+            int edge_count_repeats = edges_accum_repeats[start];
+            
+            edges_repeats[edge_base_repeats + edge_count_repeats] = end;
+            ++edges_accum_repeats[start];
+            
+            edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
+            ++edge_indices_accum[start];
+            
+            edge_base_repeats = edges_from_repeats[end];
+            edge_count_repeats = edges_accum_repeats[end];
+            
+            edges_repeats[edge_base_repeats + edge_count_repeats] = start;
+            ++edges_accum_repeats[end];
+            
+            edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
+            ++edge_indices_accum[end];
             
             bool found = false;
             for (int e = edge_base; e < edge_base + edge_count; ++e) {
@@ -115,7 +151,9 @@ init_acceleration_struct(struct ms_mesh mesh)
             }
         }
     }
+    TracyCZoneEnd(count_unique_edges);
     
+    TracyCZoneN(tight_pack, "pack unique edges", true);
     /* Tighter! */
     int edges_head = 0;
     int faces_head = 0;
@@ -127,7 +165,8 @@ init_acceleration_struct(struct ms_mesh mesh)
         edges_from[v] = edges_head;
         
         for (int i = 0; i < e_count; ++i) {
-            edges[edges_head++] = edges[e_from + i];
+            edges[edges_head] = edges[e_from + i];
+            ++edges_head;
         }
     }
     
@@ -146,6 +185,9 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     faces_from[mesh.nverts] = faces_head;
     
+    TracyCZoneEnd(tight_pack);
+    
+    TracyCZoneN(return_and_free, "free memory", true);
     struct ms_accel result = { 0 };
     
     result.faces_starts = faces_from;
@@ -153,8 +195,18 @@ init_acceleration_struct(struct ms_mesh mesh)
     result.faces_matrix = faces;
     result.verts_matrix = edges;
     
+    result.edge_indices = edge_indices;
+    
+    result.verts_starts_repeats = edges_from_repeats;
+    result.verts_matrix_repeats = edges_repeats;
+    
+    
     free(faces_accum);
     free(edges_accum);
+    free(edges_accum_repeats);
+    free(edge_indices_accum);
+    
+    TracyCZoneEnd(return_and_free);
     
     TracyCZoneEnd(__FUNC__);
     
@@ -205,9 +257,11 @@ free_acceleration_struct(struct ms_accel *accel)
     free(accel->faces_starts);
     free(accel->verts_starts);
     
-    //free(accel->faces_count);
-    //free(accel->verts_count);
+    free(accel->edge_indices);
     
     free(accel->faces_matrix);
     free(accel->verts_matrix);
+    
+    free(accel->verts_matrix_repeats);
+    free(accel->verts_starts_repeats);
 }

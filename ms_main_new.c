@@ -3,6 +3,7 @@
 #include "ms_time.c"
 #include "ms_math.c"
 #include "ms_file_new.c"
+#include "ms_subdiv_csr.c"
 #include "ms_subdiv_new.c"
 
 s32

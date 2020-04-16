@@ -224,7 +224,7 @@ do not returns ms_vec's from vert_adjacent_xxx
 
 
 
------ switch to cycles per vertex (with rdtsc)
+----- switch to cycles per vertex (with rdtsc) -----
 005dd548e79fa86ce68c570116cd995f19ab7fe4 (old CSR)
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 2307695456 cycles, 733.596619 cycles/v
@@ -252,3 +252,25 @@ without:
 	- update old points = 42s
 ~315 cycles/v
 ----
+
+
+--- use adjacency info for faster edge points
+[INFO] Loading OBJ file: res/cubic_torus.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj.
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 227616 cycles, 1185.500000 cycles/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 601984 cycles, 783.833313 cycles/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 1711520 cycles, 557.135437 cycles/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 6318240 cycles, 514.179688 cycles/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 26809440 cycles, 545.439453 cycles/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 64780672 cycles, 329.491547 cycles/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 223465344 cycles, 284.150879 cycles/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 855525184 cycles, 271.964142 cycles/v
+---
