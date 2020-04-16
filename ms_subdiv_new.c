@@ -11,6 +11,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     /* Face points */
     TracyCZoneN(compute_face_points, "face points", true);
     struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
+    f32 one_over_mesh_degree = 1.0f / mesh.degree;
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         struct ms_v3 fp = { 0 };
@@ -22,9 +23,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             fp.z += vertex.z;
         }
         
-        fp.x /= (f32) mesh.degree;
-        fp.y /= (f32) mesh.degree;
-        fp.z /= (f32) mesh.degree;
+        fp.x *= one_over_mesh_degree;
+        fp.y *= one_over_mesh_degree;
+        fp.z *= one_over_mesh_degree;
         
         face_points[face] = fp;
     }
@@ -147,6 +148,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         int adj_verts_count = accel.verts_count[v];
         int adj_faces_count = accel.faces_count[v];
         
+        f32 one_over_adj_faces_count = 1.0f / adj_faces_count;
+        
         if (adj_faces_count != adj_verts_count) {
             /* This vertex is on an edge of a hole */
             int nedges_adj_to_hole = 0;
@@ -184,9 +187,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 avg_face_point.y += fp.y;
                 avg_face_point.z += fp.z;
             }
-            avg_face_point.x /= (f32) adj_faces_count; // TODO: factor out *= 1 / ...
-            avg_face_point.y /= (f32) adj_faces_count;
-            avg_face_point.z /= (f32) adj_faces_count;
+            avg_face_point.x *= one_over_adj_faces_count;
+            avg_face_point.y *= one_over_adj_faces_count;
+            avg_face_point.z *= one_over_adj_faces_count;
             
             /* Average of mid points of all the edges this vertex is adjacent to */
             struct ms_v3 avg_mid_edge_point = { 0 };
@@ -209,8 +212,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             avg_mid_edge_point.z *= norm_coeff;
             
             /* Weights */
-            f32 w1 = (f32) (adj_faces_count - 3) / (f32) adj_faces_count;
-            f32 w2 = 1.0f / (f32) adj_faces_count;
+            f32 w1 = (f32) (adj_faces_count - 3) * one_over_adj_faces_count;
+            f32 w2 = one_over_adj_faces_count;
             f32 w3 = 2.0f * w2;
             
             /* Weighted average to obtain a new vertex */
