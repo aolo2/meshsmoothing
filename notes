@@ -309,3 +309,34 @@ screenshots of uProf in VK
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 779098816 cycles, 247.668839 cycles/v
 ~~
+
+
+~~~ added omp parallel for (no args) to face points and update points
+cubic_torus.obj 8
+with:
+	- face points = 3.7ms
+	- update points = 15ms
+without:
+	- face points = 5ms
+	- update points = 29ms
+
+
+[INFO] Loading OBJ file: res/cubic_torus.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj.
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 2011136 cycles, 10474.666992 cycles/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 516288 cycles, 672.250000 cycles/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 1513440 cycles, 492.656250 cycles/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 5818208 cycles, 473.486969 cycles/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 23412448 cycles, 476.327484 cycles/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 48748064 cycles, 247.945480 cycles/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 185788352 cycles, 236.242111 cycles/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 726217952 cycles, 230.858475 cycles/v
+~~~

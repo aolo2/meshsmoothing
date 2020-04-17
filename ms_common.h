@@ -13,6 +13,8 @@
 #define TracyCZone(a, b)
 #define TracyCZoneN(a, b, c)
 #define TracyCZoneEnd(a)
+#define TracyCAlloc(a, b)
+#define TracyCFree(a)
 #endif
 
 #define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; }

@@ -72,21 +72,17 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 }
                 
                 if (adj != face) {
-#if 0
-                    struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
-                    struct ms_v3 edge_avg = ms_math_avg(startv, endv);
-                    edge_point = ms_math_avg(face_avg, edge_avg);
-#else
                     struct ms_v3 face_point_me = face_points[face];
                     struct ms_v3 face_point_adj = face_points[adj];
                     
-                    edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
-                    edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
-                    edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
-#endif
+                    edge_point.x += (face_point_me.x + face_point_adj.x) * 0.5f;
+                    edge_point.y += (face_point_me.y + face_point_adj.y) * 0.5f;
+                    edge_point.z += (face_point_me.z + face_point_adj.z) * 0.5f;
                 } else {
                     /* This is an edge of a hole */
-                    edge_point = ms_math_avg(startv, endv);
+                    edge_point.x = (startv.x + endv.x) * 0.5f;
+                    edge_point.y = (startv.y + endv.y) * 0.5f;
+                    edge_point.z = (startv.z + endv.z) * 0.5f;
                 }
                 
                 edge_pointsv[nedge_pointsv] = edge_point;
@@ -127,7 +123,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 
                 struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
-                struct ms_v3 mid = ms_math_avg(startv, endv);
                 
                 /* Only take into account edges that are also on the edge of a hole */
                 int adj_face = edge_adjacent_face(&accel, 0, start, end);
@@ -135,15 +130,21 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;
-                    avg_mid_edge_point.x += mid.x;
-                    avg_mid_edge_point.y += mid.y;
-                    avg_mid_edge_point.z += mid.z;
+                    avg_mid_edge_point.x += (startv.x + endv.x);
+                    avg_mid_edge_point.y += (startv.y + endv.y);
+                    avg_mid_edge_point.z += (startv.z + endv.z);
                 }
             }
             
-            new_vert.x = (avg_mid_edge_point.x + vertex.x) / (nedges_adj_to_hole + 1);
-            new_vert.y = (avg_mid_edge_point.y + vertex.y) / (nedges_adj_to_hole + 1);
-            new_vert.z = (avg_mid_edge_point.z + vertex.z) / (nedges_adj_to_hole + 1);
+            f32 one_over_adj_to_hole = 1.0f / (nedges_adj_to_hole + 1);
+            
+            avg_mid_edge_point.x *= 0.5f;
+            avg_mid_edge_point.y *= 0.5f;
+            avg_mid_edge_point.z *= 0.5f;
+            
+            new_vert.x = (avg_mid_edge_point.x + vertex.x) * one_over_adj_to_hole;
+            new_vert.y = (avg_mid_edge_point.y + vertex.y) * one_over_adj_to_hole;
+            new_vert.z = (avg_mid_edge_point.z + vertex.z) * one_over_adj_to_hole;
         } else {
             /* Average of face points of all the faces this vertex is adjacent to */
             struct ms_v3 avg_face_point = { 0 };
@@ -165,11 +166,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 
                 struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
-                struct ms_v3 mid = ms_math_avg(startv, endv);
                 
-                avg_mid_edge_point.x += mid.x;
-                avg_mid_edge_point.y += mid.y;
-                avg_mid_edge_point.z += mid.z;
+                avg_mid_edge_point.x += (startv.x + endv.x) * 0.5f;
+                avg_mid_edge_point.y += (startv.y + endv.y) * 0.5f;
+                avg_mid_edge_point.z += (startv.z + endv.z) * 0.5f;
             }
             
             f32 norm_coeff = 1.0f / adj_verts_count;
@@ -260,7 +260,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(subdivide);
     
     free_acceleration_struct(&accel);
-    
     
     free(edge_pointsv);
     free(new_verts);

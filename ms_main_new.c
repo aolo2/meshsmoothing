@@ -1,14 +1,16 @@
 #define MAX_BENCH_ITERATIONS 100
 #include <math.h>
-
+#include <omp.h>
 
 #include "ms_common.h"
 
 #include "ms_time.c"
-#include "ms_math.c"
 #include "ms_file_new.c"
 #include "ms_subdiv_csr.c"
-#include "ms_subdiv_new.c"
+
+//#include "ms_subdiv_new.c"
+#include "ms_subdiv_csr_mt.c"
+#include "ms_subdiv_mt.c"
 
 s32
 main(s32 argc, char *argv[])
@@ -51,6 +53,9 @@ main(s32 argc, char *argv[])
             free(mesh.vertices);
             free(mesh.faces);
             
+            TracyCFree(mesh.vertices);
+            TracyCFree(mesh.faces);
+            
             mesh = new_mesh;
             
             u64 total = after - before;
@@ -81,6 +86,9 @@ main(s32 argc, char *argv[])
             free(new_mesh.vertices);
             free(new_mesh.faces);
             
+            TracyCFree(new_mesh.vertices);
+            TracyCFree(new_mesh.faces);
+            
             iteration_cycles[i] = (f32) (after - before) / (mesh.nfaces * 4);
             total_total_cycles += (f32) (after - before) / (mesh.nfaces * 4);
         }
@@ -99,7 +107,7 @@ main(s32 argc, char *argv[])
         
         stdev = sqrtf(stdev);
         
-        printf("[TIME] Average: %f cycles/v, Stdeviation: %f\n", avg, stdev);
+        printf("[TIME] Runs: %d Average: %f cycles/v, Stdeviation: %f\n", bench_itearitons, avg, stdev);
     }
     
     if (fortex) {
@@ -108,6 +116,9 @@ main(s32 argc, char *argv[])
     
     free(mesh.vertices);
     free(mesh.faces);
+    
+    TracyCFree(mesh.vertices);
+    TracyCFree(mesh.faces);
     
     return(0);
 }

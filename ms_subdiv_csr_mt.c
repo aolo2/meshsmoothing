@@ -1,49 +1,66 @@
 // init accel structure (two CSRs)
 static struct ms_accel
-init_acceleration_struct(struct ms_mesh mesh)
+init_acceleration_struct_mt(struct ms_mesh mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    TracyCZoneN(count_initial_offsets, "alloc and count all edges", true);
+    TracyCZoneN(alloc_initial_offsets, "alloc offset arrays", true);
     int *edges_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
     int *faces_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    
     int *edges_from_repeats = calloc(1, (mesh.nverts + 1) * sizeof(int));
     
     TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
     TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
     TracyCAlloc(edges_from_repeats, (mesh.nverts + 1) * sizeof(int));
+    TracyCZoneEnd(alloc_initial_offsets);
     
-    int nedges = 0;
-    int nfaces = 0;
     
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            edges_from[start + 1]++;
-            edges_from[end + 1]++;
-            
-            edges_from_repeats[start + 1]++;
-            edges_from_repeats[end + 1]++;
-            
-            faces_from[start + 1]++;
-            faces_from[end + 1]++;
-            
-            nedges += 2;
-            nfaces += 2;
+#pragma omp parallel
+    {
+        TracyCZoneN(count_initial_offsets, "count all edges", true);
+        int nedges = 0;
+        int nfaces = 0;
+        
+        int *edges_from_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
+        int *faces_from_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
+        int *edges_from_repeats_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
+        
+        for (int face = 0; face < mesh.nfaces; ++face) {
+            for (int vert = 0; vert < mesh.degree; ++vert) {
+                int next = (vert + 1) % mesh.degree;
+                
+                int start = mesh.faces[face * mesh.degree + vert];
+                int end = mesh.faces[face * mesh.degree + next];
+                
+                edges_from_local[start + 1]++;
+                edges_from_local[end + 1]++;
+                
+                edges_from_repeats_local[start + 1]++;
+                edges_from_repeats_local[end + 1]++;
+                
+                faces_from_local[start + 1]++;
+                faces_from_local[end + 1]++;
+                
+                nedges += 2;
+                nfaces += 2;
+            }
         }
+        
+        for (int v = 1; v < mesh.nverts + 1; ++v) {
+            edges_from_local[v] += edges_from_local[v - 1];
+            edges_from_repeats_local[v] += edges_from_repeats_local[v - 1];
+            faces_from_local[v] += faces_from_local[v - 1];
+        }
+        TracyCZoneEnd(count_initial_offsets);
     }
     
-    for (int v = 1; v < mesh.nverts + 1; ++v) {
-        edges_from[v] += edges_from[v - 1];
-        edges_from_repeats[v] += edges_from_repeats[v - 1];
-        faces_from[v] += faces_from[v - 1];
+    TracyCZoneN(reduce_initial_offsets, "reduce counts", true);
+    for (int i = 0; i < mesh.nverts + 1; ++i) {
+        edges_from = ;
+        faces_from = ;
+        edges_from_repeats = ;
     }
-    TracyCZoneEnd(count_initial_offsets);
+    TracyCZoneEnd(reduce_initial_offsets);
     
     TracyCZoneN(count_unique_edges, "alloc and count unique edges", true);
     int *edges = malloc(nedges * sizeof(int));
@@ -236,89 +253,4 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneEnd(__FUNC__);
     
     return(result);
-}
-
-//static inline int *
-//edge_adjacent_face_lookup(struct ms_accel *accel, int me, int edge)
-//{
-//int *result = accel->edge_faces + edge;
-//return(result);
-//}
-
-static int
-edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
-{
-    //TracyCZone(__FUNC__, true);
-#if 1
-    int start_faces_from = accel->faces_starts[start];
-    int end_faces_from = accel->faces_starts[end];
-    
-    int start_faces_to = accel->faces_starts[start + 1];
-    int end_faces_to = accel->faces_starts[end + 1];
-    
-    int nfaces_start = start_faces_to - start_faces_from;
-    int nfaces_end = end_faces_to - end_faces_from;
-    
-    int *faces = accel->faces_matrix;
-    
-    if (nfaces_start > 0 && nfaces_end > 0) {
-        for (int f1 = start_faces_from; f1 < start_faces_to; ++f1) {
-            int face = faces[f1];
-            if (face == me) {
-                continue;
-            }
-            
-            for (int f2 = end_faces_from; f2 < end_faces_to; ++f2) {
-                int other_face = faces[f2];
-                if (other_face == face) {
-                    //TracyCZoneEnd(__FUNC__);
-                    return(face);
-                }
-            }
-        }
-    }
-    
-    //TracyCZoneEnd(__FUNC__);
-    
-#else
-    int ends_from = accel->verts_starts_repeats[start];
-    int ends_to = accel->verts_starts_repeats[start + 1];
-    
-    for (int e = ends_from; e < ends_to; ++e) {
-        int some_end = accel->verts_matrix_repeats[e];
-        int face = accel->edge_faces[e];
-        if (some_end == end && me != face) {
-            return(face);
-        }
-    }
-#endif
-    return(me);
-}
-
-static void
-free_acceleration_struct(struct ms_accel *accel)
-{
-    free(accel->faces_starts);
-    free(accel->verts_starts);
-    
-    free(accel->edge_indices);
-    free(accel->edge_faces);
-    
-    free(accel->faces_matrix);
-    free(accel->verts_matrix);
-    
-    free(accel->verts_matrix_repeats);
-    free(accel->verts_starts_repeats);
-    
-    TracyCFree(accel->faces_starts);
-    TracyCFree(accel->verts_starts);
-    
-    TracyCFree(accel->edge_indices);
-    TracyCFree(accel->edge_faces);
-    
-    TracyCFree(accel->faces_matrix);
-    TracyCFree(accel->verts_matrix);
-    
-    TracyCFree(accel->verts_matrix_repeats);
-    TracyCFree(accel->verts_starts_repeats);
 }
