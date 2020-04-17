@@ -298,3 +298,14 @@ without:
 
 curiously, 20cycles/vertex speedup for replacing in edge points, but gets worse
 when replacing hole point updates
+
+
+debug mode uProf run revealed that
+if (accel.verts_matrix_repeats[e3] == end && adj_face != face) has BR misp = 70.46%
+
+!!! wow this works !!!
+rearranged the if and got down to
+screenshots of uProf in VK
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 779098816 cycles, 247.668839 cycles/v
+~~

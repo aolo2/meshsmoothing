@@ -44,7 +44,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         for (int e = from; e < to; ++e) {
             int end = accel.verts_matrix_repeats[e];
             int edge = accel.edge_indices[e];
-            //int face = edge / 4;
             
             int found = -1;
             for (int e2 = from; e2 < e; ++e2) {
@@ -60,19 +59,17 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 endv = mesh.vertices[end];
                 
                 int face = edge >> 2;
-                
-#if 1
                 int adj = face;
+                
                 for (int e3 = from; e3 < to; ++e3) {
-                    int adj_face = accel.edge_faces[e3];
-                    if (accel.verts_matrix_repeats[e3] == end && adj_face != face) {
-                        adj = adj_face;
-                        break;
+                    if (accel.verts_matrix_repeats[e3] == end) {
+                        int adj_face = accel.edge_faces[e3];
+                        if (adj_face != face) {
+                            adj = adj_face;
+                            break;
+                        }
                     }
                 }
-#else
-                int adj = edge_adjacent_face(&accel, face, start, end);
-#endif
                 
                 if (adj != face) {
                     struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
@@ -124,29 +121,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 mid = ms_math_avg(startv, endv);
                 
                 /* Only take into account edges that are also on the edge of a hole */
-#if 0
-                int adj_face = -1;
-                int another_adj_face = -1;
-                int ends_from = accel.verts_starts_repeats[start];
-                int ends_to = accel.verts_starts_repeats[start + 1];
-                
-                for (int e = ends_from; e < ends_to; ++e) {
-                    int some_end = accel.verts_matrix_repeats[e];
-                    int some_face = accel.edge_faces[e];
-                    if (some_end == end) {
-                        if (adj_face == -1) {
-                            adj_face = some_face;
-                            another_adj_face = adj_face;
-                        } else if (some_face != adj_face) {
-                            another_adj_face = some_face;
-                            break;
-                        }
-                    }
-                }
-#else
                 int adj_face = edge_adjacent_face(&accel, 0, start, end);
                 int another_adj_face = edge_adjacent_face(&accel, adj_face, start, end);
-#endif
                 
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;
@@ -281,14 +257,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     free(new_verts);
     free(face_points);
     free(edge_points);
-    
-#if 0
-    free(accum);
-    free(ends);
-    free(edges);
-    free(faces);
-    free(end_counts);
-#endif
     
     TracyCZoneEnd(__FUNC__);
     
