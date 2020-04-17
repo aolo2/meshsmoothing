@@ -50,6 +50,7 @@ struct ms_accel {
     int *verts_starts;
     
     int *edge_indices;
+    int *edge_faces;
     
     int *faces_matrix;
     int *verts_matrix;

@@ -274,3 +274,27 @@ without:
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 855525184 cycles, 271.964142 cycles/v
 ---
+
+-- save face info per edge and use it instead of edge_adjacent_face ---
+[INFO] Loading OBJ file: res/cubic_torus.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj.
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 246848 cycles, 1285.666626 cycles/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 587776 cycles, 765.333313 cycles/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 1789152 cycles, 582.406250 cycles/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 6698912 cycles, 545.158875 cycles/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 29922496 cycles, 608.774719 cycles/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 48483808 cycles, 246.601395 cycles/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 193588800 cycles, 246.160889 cycles/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 805827360 cycles, 256.165619 cycles/v
+---
+
+curiously, 20cycles/vertex speedup for replacing in edge points, but gets worse
+when replacing hole point updates

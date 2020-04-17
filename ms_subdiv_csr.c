@@ -52,6 +52,7 @@ init_acceleration_struct(struct ms_mesh mesh)
     int *edges_accum_repeats = calloc(1, mesh.nverts * sizeof(int));
     
     int *edge_indices = malloc(nedges * sizeof(int));
+    int *edge_faces = malloc(nedges * sizeof(int));
     int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
     
     for (int face = 0; face < mesh.nfaces; ++face) {
@@ -75,6 +76,7 @@ init_acceleration_struct(struct ms_mesh mesh)
             ++edges_accum_repeats[start];
             
             edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
+            edge_faces[edge_base_repeats + edge_count_repeats] = face;
             ++edge_indices_accum[start];
             
             edge_base_repeats = edges_from_repeats[end];
@@ -84,6 +86,7 @@ init_acceleration_struct(struct ms_mesh mesh)
             ++edges_accum_repeats[end];
             
             edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
+            edge_faces[edge_base_repeats + edge_count_repeats] = face;
             ++edge_indices_accum[end];
             
             bool found = false;
@@ -196,10 +199,10 @@ init_acceleration_struct(struct ms_mesh mesh)
     result.verts_matrix = edges;
     
     result.edge_indices = edge_indices;
+    result.edge_faces = edge_faces;
     
     result.verts_starts_repeats = edges_from_repeats;
     result.verts_matrix_repeats = edges_repeats;
-    
     
     free(faces_accum);
     free(edges_accum);
@@ -213,11 +216,18 @@ init_acceleration_struct(struct ms_mesh mesh)
     return(result);
 }
 
+//static inline int *
+//edge_adjacent_face_lookup(struct ms_accel *accel, int me, int edge)
+//{
+//int *result = accel->edge_faces + edge;
+//return(result);
+//}
+
 static int
 edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
 {
     //TracyCZone(__FUNC__, true);
-    
+#if 1
     int start_faces_from = accel->faces_starts[start];
     int end_faces_from = accel->faces_starts[end];
     
@@ -248,6 +258,18 @@ edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
     
     //TracyCZoneEnd(__FUNC__);
     
+#else
+    int ends_from = accel->verts_starts_repeats[start];
+    int ends_to = accel->verts_starts_repeats[start + 1];
+    
+    for (int e = ends_from; e < ends_to; ++e) {
+        int some_end = accel->verts_matrix_repeats[e];
+        int face = accel->edge_faces[e];
+        if (some_end == end && me != face) {
+            return(face);
+        }
+    }
+#endif
     return(me);
 }
 
@@ -258,6 +280,7 @@ free_acceleration_struct(struct ms_accel *accel)
     free(accel->verts_starts);
     
     free(accel->edge_indices);
+    free(accel->edge_faces);
     
     free(accel->faces_matrix);
     free(accel->verts_matrix);
