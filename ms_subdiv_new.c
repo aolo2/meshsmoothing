@@ -72,9 +72,18 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 }
                 
                 if (adj != face) {
+#if 0
                     struct ms_v3 face_avg = ms_math_avg(face_points[face], face_points[adj]);
                     struct ms_v3 edge_avg = ms_math_avg(startv, endv);
                     edge_point = ms_math_avg(face_avg, edge_avg);
+#else
+                    struct ms_v3 face_point_me = face_points[face];
+                    struct ms_v3 face_point_adj = face_points[adj];
+                    
+                    edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
+                    edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
+                    edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
+#endif
                 } else {
                     /* This is an edge of a hole */
                     edge_point = ms_math_avg(startv, endv);
