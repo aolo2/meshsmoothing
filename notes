@@ -340,3 +340,28 @@ without:
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 726217952 cycles, 230.858475 cycles/v
 ~~~
+
+-- am puzzled. poking around different profilers to get a lead ---
+vtune shows poor CPU utilization, about 35% of cycles are 0issue: waitiing for cache
+tracy shows that malloc takes no time (surprise insight)
+
+tracy: seems that init_acceleration_structure is N^2. it's 55% on lesser meshes, about 75% on a bigger one
+
+
+reuse edges_from in init_acceleration_structire:
+res/cube_noface.obj_8.obj_2.obj 1
+without:
+	[TIME] 20971520 vertices, 7178827036 cycles, 342.313171 cycles/v
+	
+	init_a_s: 1.58s
+	count all edges: 221ms
+	alloc and count: 1.29s
+	pack: 64ms
+
+with:
+	[TIME] 20971520 vertices, 6432544059 cycles, 306.727600 cycles/v
+	init_a_s: 1.3s
+	count all edges: 111ms
+	alloc and count: 1.12s
+	pack: 66ms
+---

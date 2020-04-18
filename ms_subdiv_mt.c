@@ -35,6 +35,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     
     /* Edge points */
+    TracyCZoneN(alloc_edge_points, "allocate", true);
     int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
     int nedge_pointsv = 0;
     int nedges = accel.verts_starts[mesh.nverts];
@@ -46,6 +47,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCAlloc(edge_points, mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
     TracyCAlloc(edge_pointsv, nedges * 2 * sizeof(struct ms_v3));
+    
+    TracyCZoneEnd(alloc_edge_points);
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
     for (int start = 0; start < mesh.nverts; ++start) {
@@ -210,7 +213,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     
     /* Subdivide */
-    
+    TracyCZoneN(alloc_new_mesh, "allocate", true);
     struct ms_mesh new_mesh = { 0 };
     new_mesh.nfaces = mesh.nfaces * 4;
     
@@ -220,14 +223,18 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     new_mesh.faces = malloc(new_mesh.nfaces * 4 * sizeof(int));
     new_mesh.degree = 4;
-    
-    memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
-    memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, nedge_pointsv * sizeof(struct ms_v3));
-    
     TracyCAlloc(new_mesh.vertices, new_mesh.nverts * sizeof(struct ms_v3));
     TracyCAlloc(new_mesh.faces, new_mesh.nfaces * 4 * sizeof(int));
     
+    TracyCZoneEnd(alloc_new_mesh);
+    
+    TracyCZoneN(copy_data, "copy unique points", true);
+    memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
+    memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, nedge_pointsv * sizeof(struct ms_v3));
+    TracyCZoneEnd(copy_data);
+    
     int vert_base = mesh.nverts + nedge_pointsv;
+    
     
 #pragma omp parallel
     {

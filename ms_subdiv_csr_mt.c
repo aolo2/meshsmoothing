@@ -6,63 +6,40 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     TracyCZoneN(alloc_initial_offsets, "alloc offset arrays", true);
     int *edges_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    int *faces_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    int *edges_from_repeats = calloc(1, (mesh.nverts + 1) * sizeof(int));
     
     TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
-    TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
-    TracyCAlloc(edges_from_repeats, (mesh.nverts + 1) * sizeof(int));
     TracyCZoneEnd(alloc_initial_offsets);
     
+    TracyCZoneN(count_initial_offsets, "count all edges", true);
+    int nedges = 0;
+    int nfaces = 0;
     
-#pragma omp parallel
-    {
-        TracyCZoneN(count_initial_offsets, "count all edges", true);
-        int nedges = 0;
-        int nfaces = 0;
-        
-        int *edges_from_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
-        int *faces_from_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
-        int *edges_from_repeats_local = calloc(1, (mesh.nverts + 1) * sizeof(int));
-        
-        for (int face = 0; face < mesh.nfaces; ++face) {
-            for (int vert = 0; vert < mesh.degree; ++vert) {
-                int next = (vert + 1) % mesh.degree;
-                
-                int start = mesh.faces[face * mesh.degree + vert];
-                int end = mesh.faces[face * mesh.degree + next];
-                
-                edges_from_local[start + 1]++;
-                edges_from_local[end + 1]++;
-                
-                edges_from_repeats_local[start + 1]++;
-                edges_from_repeats_local[end + 1]++;
-                
-                faces_from_local[start + 1]++;
-                faces_from_local[end + 1]++;
-                
-                nedges += 2;
-                nfaces += 2;
-            }
+    for (int face = 0; face < mesh.nfaces; ++face) {
+        for (int vert = 0; vert < mesh.degree; ++vert) {
+            int next = (vert + 1) % mesh.degree;
+            
+            int start = mesh.faces[face * mesh.degree + vert];
+            int end = mesh.faces[face * mesh.degree + next];
+            
+            edges_from[start + 1]++;
+            edges_from[end + 1]++;
+            
+            nedges += 2;
+            nfaces += 2;
         }
-        
-        for (int v = 1; v < mesh.nverts + 1; ++v) {
-            edges_from_local[v] += edges_from_local[v - 1];
-            edges_from_repeats_local[v] += edges_from_repeats_local[v - 1];
-            faces_from_local[v] += faces_from_local[v - 1];
-        }
-        TracyCZoneEnd(count_initial_offsets);
     }
     
-    TracyCZoneN(reduce_initial_offsets, "reduce counts", true);
-    for (int i = 0; i < mesh.nverts + 1; ++i) {
-        edges_from = ;
-        faces_from = ;
-        edges_from_repeats = ;
+    for (int v = 1; v < mesh.nverts + 1; ++v) {
+        edges_from[v] += edges_from[v - 1];
     }
-    TracyCZoneEnd(reduce_initial_offsets);
+    
+    int *faces_from = edges_from;
+    int *edges_from_repeats = edges_from;
+    TracyCZoneEnd(count_initial_offsets);
     
     TracyCZoneN(count_unique_edges, "alloc and count unique edges", true);
+    
+    TracyCZoneN(alloc_unique_edges, "alloc", true);
     int *edges = malloc(nedges * sizeof(int));
     int *faces = malloc(nfaces * sizeof(int));
     
@@ -88,6 +65,10 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     TracyCAlloc(edge_indices, nedges * sizeof(int));
     TracyCAlloc(edge_faces, nedges * sizeof(int));
     TracyCAlloc(edge_indices_accum, mesh.nverts * sizeof(int));
+    
+    TracyCZoneEnd(alloc_unique_edges);
+    
+    TracyCZoneN(count_unique_edges_count, "count", true);
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
@@ -188,6 +169,17 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
             }
         }
     }
+    
+    faces_from = malloc((mesh.nverts + 1) * sizeof(int));
+    edges_from_repeats = malloc((mesh.nverts + 1) * sizeof(int));
+    
+    TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
+    TracyCAlloc(edges_from_repeats, (mesh.nverts + 1) * sizeof(int));
+    
+    memcpy(faces_from, edges_from, (mesh.nverts + 1) * sizeof(int));
+    memcpy(edges_from_repeats, edges_from, (mesh.nverts + 1) * sizeof(int));
+    
+    TracyCZoneEnd(count_unique_edges_count);
     TracyCZoneEnd(count_unique_edges);
     
     TracyCZoneN(tight_pack, "pack unique edges", true);

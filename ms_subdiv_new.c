@@ -59,8 +59,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 endv = mesh.vertices[end];
                 
                 int face = edge >> 2;
-                int adj = face;
                 
+#if 0
+                int adj = face;
                 for (int e3 = from; e3 < to; ++e3) {
                     if (accel.verts_matrix_repeats[e3] == end) {
                         int adj_face = accel.edge_faces[e3];
@@ -70,14 +71,17 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                         }
                     }
                 }
+#else
+                int adj = edge_adjacent_face(&accel, face, start, end);
+#endif
                 
                 if (adj != face) {
                     struct ms_v3 face_point_me = face_points[face];
                     struct ms_v3 face_point_adj = face_points[adj];
                     
-                    edge_point.x += (face_point_me.x + face_point_adj.x) * 0.5f;
-                    edge_point.y += (face_point_me.y + face_point_adj.y) * 0.5f;
-                    edge_point.z += (face_point_me.z + face_point_adj.z) * 0.5f;
+                    edge_point.x = (startv.x + endv.x + face_point_me.x + face_point_adj.x) * 0.25f;
+                    edge_point.y = (startv.y + endv.y + face_point_me.y + face_point_adj.y) * 0.25f;
+                    edge_point.z = (startv.z + endv.z + face_point_me.z + face_point_adj.z) * 0.25f;
                 } else {
                     /* This is an edge of a hole */
                     edge_point.x = (startv.x + endv.x) * 0.5f;
