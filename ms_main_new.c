@@ -1,16 +1,19 @@
 #define MAX_BENCH_ITERATIONS 100
 #include <math.h>
-#include <omp.h>
 
 #include "ms_common.h"
 
 #include "ms_time.c"
 #include "ms_file_new.c"
-#include "ms_subdiv_csr.c"
 
-//#include "ms_subdiv_new.c"
+#ifdef MT
+#include <omp.h>
 #include "ms_subdiv_csr_mt.c"
 #include "ms_subdiv_mt.c"
+#else
+#include "ms_subdiv_csr.c"
+#include "ms_subdiv.c"
+#endif
 
 int
 main(int argc, char *argv[])

@@ -349,7 +349,6 @@ reuse edges_from in init_acceleration_structire:
 res/cube_noface.obj_8.obj_2.obj 1
 without:
 	[TIME] 20971520 vertices, 7178827036 cycles, 342.313171 cycles/v
-	
 	init_a_s: 1.58s
 	count all edges: 221ms
 	alloc and count: 1.29s
