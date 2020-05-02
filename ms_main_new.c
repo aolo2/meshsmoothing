@@ -12,8 +12,8 @@
 #include "ms_subdiv_csr_mt.c"
 #include "ms_subdiv_mt.c"
 
-s32
-main(s32 argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
     if (argc != 3 && argc != 4) {
         fprintf(stderr, "[ERROR] Usage: %s path/to/model.obj ITERATIONS [BENCH_IRERATIONS]\n", argv[0]);

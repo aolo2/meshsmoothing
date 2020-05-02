@@ -41,9 +41,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     int nedges = accel.verts_starts[mesh.nverts];
     struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
     
-    for (int i = 0; i < mesh.nfaces * mesh.degree; ++i) {
-        edge_points[i] = -1;
-    }
+    memset(edge_points, -1, mesh.nfaces * mesh.degree);
     
     TracyCAlloc(edge_points, mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
     TracyCAlloc(edge_pointsv, nedges * 2 * sizeof(struct ms_v3));
@@ -52,59 +50,59 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
     for (int start = 0; start < mesh.nverts; ++start) {
-        int from = accel.verts_starts_repeats[start];
-        int to = accel.verts_starts_repeats[start + 1];
+        int from = accel.verts_starts[start];
+        int to = accel.verts_starts[start + 1];
         
         for (int e = from; e < to; ++e) {
-            int end = accel.verts_matrix_repeats[e];
-            int edge = accel.edge_indices[e];
+            int end = accel.verts_matrix[e];
             
-            int found = -1;
-            for (int e2 = from; e2 < e; ++e2) {
-                if (accel.verts_matrix_repeats[e2] == end) {
-                    found = accel.edge_indices[e2];
-                    break;
-                }
-            }
+            /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
+            int edge_index_1 = accel.edge_indices[2 * e + 0];
+            int edge_index_2 = accel.edge_indices[2 * e + 1];
             
-            if (found == -1) {
-                struct ms_v3 edge_point;
-                struct ms_v3 startv = mesh.vertices[start];
-                struct ms_v3 endv = mesh.vertices[end];
-                
-                int face = edge >> 2;
-                int adj = face;
-                
-                for (int e3 = from; e3 < to; ++e3) {
-                    if (accel.verts_matrix_repeats[e3] == end) {
-                        int adj_face = accel.edge_faces[e3];
-                        if (adj_face != face) {
-                            adj = adj_face;
-                            break;
-                        }
+            struct ms_v3 startv = mesh.vertices[start];
+            struct ms_v3 endv = mesh.vertices[end];
+            
+            int face = edge_index_1 >> 2;
+            int adj  = edge_index_2 >> 2;
+            
+#if 0
+            int adj = face;
+            
+            for (int e3 = from; e3 < to; ++e3) {
+                if (accel.verts_matrix_repeats[e3] == end) {
+                    int adj_face = accel.edge_faces[e3];
+                    if (adj_face != face) {
+                        adj = adj_face;
+                        break;
                     }
                 }
-                
-                if (adj != face) {
-                    struct ms_v3 face_point_me = face_points[face];
-                    struct ms_v3 face_point_adj = face_points[adj];
-                    
-                    edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
-                    edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
-                    edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
-                } else {
-                    /* This is an edge of a hole */
-                    edge_point.x = (startv.x + endv.x) * 0.5f;
-                    edge_point.y = (startv.y + endv.y) * 0.5f;
-                    edge_point.z = (startv.z + endv.z) * 0.5f;
-                }
-                
-                ++nedge_pointsv;
-                edge_pointsv[nedge_pointsv - 1] = edge_point;
-                edge_points[edge] = nedge_pointsv - 1;
-            } else {
-                edge_points[edge] = edge_points[found];
             }
+            // int adj = edge_adjacent_face(&accel, face, start, end);
+#endif
+            
+            struct ms_v3 edge_point;
+            
+            if (adj != face) {
+                struct ms_v3 face_point_me = face_points[face];
+                struct ms_v3 face_point_adj = face_points[adj];
+                
+                edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
+                edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
+                edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
+            } else {
+                /* This is an edge of a hole */
+                edge_point.x = (startv.x + endv.x) * 0.5f;
+                edge_point.y = (startv.y + endv.y) * 0.5f;
+                edge_point.z = (startv.z + endv.z) * 0.5f;
+            }
+            
+            edge_pointsv[nedge_pointsv] = edge_point;
+            
+            edge_points[edge_index_1] = nedge_pointsv;
+            edge_points[edge_index_2] = nedge_pointsv; /* REMINDER: edge_index_2 might be equal to edge_index_1 if the edge is unique */
+            
+            ++nedge_pointsv;
         }
     }
     

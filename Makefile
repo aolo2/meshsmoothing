@@ -17,4 +17,4 @@ profile_fast:
 	@+make -f build/profile.mk fast --no-print-directory
 
 .PHONY:
-	all debug release profile
+	all debug release profile profile_fast

@@ -104,9 +104,6 @@ simplify edge points table somehow... (found many DC misses via uProf)
 remove ms_vecs everywhere (found many samples)
 
 
-
-
-
 ========= 15.04.20. Edge sort (-O2)
 [INFO] Loaded OBJ file: res/cubic_torus.obj
 [INFO] Finished Catmull-Clark [1]
@@ -364,4 +361,43 @@ with:
 	count all edges: 111ms
 	alloc and count: 1.12s
 	pack: 66ms
+---
+
+---
+time distribution:
+	cubic_torus.obj_7.obj _ 25
+		init as: 51%
+		edge points: 29%
+		update old: 6%
+		do subdiv: 5%
+		copy unique: 4%
+		face points: 1%
+
+	cubic_torus.obj_4.obj _ 25
+		similar
+
+	cubic_torus.obj_7.obj 3
+		similar
+---
+
+--- great simplification! remove edges_repeats and faces_repeats. edge_indices are computed and packed with 2 edge indices mapping to one unique edge (indices are the same if edge is unique and different if they arent)
+
+[INFO] Loading OBJ file: res/cubic_torus.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj.
+[INFO] Finished Catmull-Clark [1]
+[TIME] 192 vertices, 1503360 cycles, 7830.000000 cycles/v
+[INFO] Finished Catmull-Clark [2]
+[TIME] 768 vertices, 4625536 cycles, 6022.833496 cycles/v
+[INFO] Finished Catmull-Clark [3]
+[TIME] 3072 vertices, 1607264 cycles, 523.197937 cycles/v
+[INFO] Finished Catmull-Clark [4]
+[TIME] 12288 vertices, 5530432 cycles, 450.067719 cycles/v
+[INFO] Finished Catmull-Clark [5]
+[TIME] 49152 vertices, 29762144 cycles, 605.512390 cycles/v
+[INFO] Finished Catmull-Clark [6]
+[TIME] 196608 vertices, 54482336 cycles, 277.111481 cycles/v
+[INFO] Finished Catmull-Clark [7]
+[TIME] 786432 vertices, 156802144 cycles, 199.384232 cycles/v
+[INFO] Finished Catmull-Clark [8]
+[TIME] 3145728 vertices, 621576576 cycles, 197.593872 cycles/v
 ---

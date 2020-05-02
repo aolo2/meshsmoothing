@@ -56,7 +56,4 @@ struct ms_accel {
     
     int *faces_matrix;
     int *verts_matrix;
-    
-    int *verts_starts_repeats;
-    int *verts_matrix_repeats;
 };

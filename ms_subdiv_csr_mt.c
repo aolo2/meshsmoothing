@@ -34,7 +34,6 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     }
     
     int *faces_from = edges_from;
-    int *edges_from_repeats = edges_from;
     TracyCZoneEnd(count_initial_offsets);
     
     TracyCZoneN(count_unique_edges, "alloc and count unique edges", true);
@@ -46,10 +45,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     int *edges_accum = calloc(1, mesh.nverts * sizeof(int));
     int *faces_accum = calloc(1, mesh.nverts * sizeof(int));
     
-    int *edges_repeats = malloc(nedges * sizeof(int));
-    int *edges_accum_repeats = calloc(1, mesh.nverts * sizeof(int));
-    
-    int *edge_indices = malloc(nedges * sizeof(int));
+    int *edge_indices = malloc(2 * nedges * sizeof(int));
     int *edge_faces = malloc(nedges * sizeof(int));
     int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
     
@@ -59,10 +55,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     TracyCAlloc(edges_accum, mesh.nverts * sizeof(int));
     TracyCAlloc(faces_accum, mesh.nverts * sizeof(int));
     
-    TracyCAlloc(edges_accum_repeats, mesh.nverts * sizeof(int));
-    TracyCAlloc(edges_repeats, mesh.nverts * sizeof(int));
-    
-    TracyCAlloc(edge_indices, nedges * sizeof(int));
+    TracyCAlloc(edge_indices, 2 * nedges * sizeof(int));
     TracyCAlloc(edge_faces, nedges * sizeof(int));
     TracyCAlloc(edge_indices_accum, mesh.nverts * sizeof(int));
     
@@ -84,64 +77,53 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
             int edge_base = edges_from[start];
             int edge_count = edges_accum[start];
             
-            int edge_base_repeats = edges_from_repeats[start];
-            int edge_count_repeats = edges_accum_repeats[start];
-            
-            edges_repeats[edge_base_repeats + edge_count_repeats] = end;
-            ++edges_accum_repeats[start];
-            
-            edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
-            edge_faces[edge_base_repeats + edge_count_repeats] = face;
-            ++edge_indices_accum[start];
-            
-            edge_base_repeats = edges_from_repeats[end];
-            edge_count_repeats = edges_accum_repeats[end];
-            
-            edges_repeats[edge_base_repeats + edge_count_repeats] = start;
-            ++edges_accum_repeats[end];
-            
-            edge_indices[edge_base_repeats + edge_count_repeats] = start_edge_index;
-            edge_faces[edge_base_repeats + edge_count_repeats] = face;
-            ++edge_indices_accum[end];
-            
-            bool found = false;
+            int found = -1;
             for (int e = edge_base; e < edge_base + edge_count; ++e) {
                 if (edges[e] == end) {
-                    found = true;
+                    found = e;
                     break;
                 }
             }
             
-            if (!found) {
+            if (found == -1) {
                 edges[edge_base + edge_count] = end;
                 edges_accum[start] += 1;
+                edge_indices[(edge_base + edge_count) * 2 + 0] = start_edge_index;
+                edge_indices[(edge_base + edge_count) * 2 + 1] = start_edge_index;
+            } else {
+                edge_indices[found * 2 + 1] = start_edge_index;
             }
             
             /* edge end */
             edge_base = edges_from[end];
             edge_count = edges_accum[end];
             
-            found = false;
+            found = -1;
             for (int e = edge_base; e < edge_base + edge_count; ++e) {
                 if (edges[e] == start) {
-                    found = true;
+                    found = e;
                     break;
                 }
             }
             
-            if (!found) {
+            if (found == -1) {
                 edges[edge_base + edge_count] = start;
                 edges_accum[end] += 1;
+                edge_indices[(edge_base + edge_count) * 2 + 0] = start_edge_index;
+                edge_indices[(edge_base + edge_count) * 2 + 1] = start_edge_index;
+            } else {
+                edge_indices[found * 2 + 1] = start_edge_index;
             }
+            
             
             /* start face */
             int face_base = faces_from[start];
             int face_count = faces_accum[start];
             
-            found = false;
+            found = 0;
             for (int f = face_base; f < face_base + face_count; ++f) {
                 if (faces[f] == face) {
-                    found = true;
+                    found = 1;
                     break;
                 }
             }
@@ -155,10 +137,10 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
             face_base = faces_from[end];
             face_count = faces_accum[end];
             
-            found = false;
+            found = 0;
             for (int f = face_base; f < face_base + face_count; ++f) {
                 if (faces[f] == face) {
-                    found = true;
+                    found = 1;
                     break;
                 }
             }
@@ -171,13 +153,10 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     }
     
     faces_from = malloc((mesh.nverts + 1) * sizeof(int));
-    edges_from_repeats = malloc((mesh.nverts + 1) * sizeof(int));
     
     TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
-    TracyCAlloc(edges_from_repeats, (mesh.nverts + 1) * sizeof(int));
     
     memcpy(faces_from, edges_from, (mesh.nverts + 1) * sizeof(int));
-    memcpy(edges_from_repeats, edges_from, (mesh.nverts + 1) * sizeof(int));
     
     TracyCZoneEnd(count_unique_edges_count);
     TracyCZoneEnd(count_unique_edges);
@@ -195,6 +174,8 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
         
         for (int i = 0; i < e_count; ++i) {
             edges[edges_head] = edges[e_from + i];
+            edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
+            edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
             ++edges_head;
         }
     }
@@ -227,19 +208,13 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     result.edge_indices = edge_indices;
     result.edge_faces = edge_faces;
     
-    result.verts_starts_repeats = edges_from_repeats;
-    result.verts_matrix_repeats = edges_repeats;
-    
     free(faces_accum);
     free(edges_accum);
-    free(edges_accum_repeats);
     free(edge_indices_accum);
     
     TracyCFree(faces_accum);
     TracyCFree(edges_accum);
-    TracyCFree(edges_accum_repeats);
     TracyCFree(edge_indices_accum);
-    
     TracyCZoneEnd(return_and_free);
     
     TracyCZoneEnd(__FUNC__);
