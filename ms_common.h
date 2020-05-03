@@ -6,6 +6,7 @@
 #include <assert.h>  /* for assert */
 #include <ctype.h>   /* for isspace, isalpha etc */
 #include <time.h>    /* for clock_gettime */
+#include <math.h>    /* for sqrtf */
 
 #ifdef PROFILE
 #include "external/tracy/TracyC.h"
@@ -17,6 +18,7 @@
 #define TracyCFree(a)
 #endif
 
+#define MAX_BENCH_ITERATIONS 100
 #define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; }
 
 typedef int64_t s64;

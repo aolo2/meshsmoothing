@@ -184,8 +184,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
         
         new_verts[v] = new_vert;
-        TracyCZoneEnd(update_positions);
     }
+    TracyCZoneEnd(update_positions);
     
     /* Subdivide */
     TracyCZoneN(alloc_new_mesh, "allocate", true);

@@ -1,6 +1,3 @@
-#define MAX_BENCH_ITERATIONS 100
-#include <math.h>
-
 #include "ms_common.h"
 
 #include "ms_time.c"
