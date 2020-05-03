@@ -34,6 +34,11 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
+struct ms_v2i {
+    int a;
+    int b;
+};
+
 struct ms_v3 {
     f32 x;
     f32 y;

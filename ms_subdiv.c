@@ -120,8 +120,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 struct ms_v3 endv = mesh.vertices[end];
                 
                 /* Only take into account edges that are also on the edge of a hole */
-                int adj_face = edge_adjacent_face(&accel, 0, start, end);
-                int another_adj_face = edge_adjacent_face(&accel, adj_face, start, end);
+                struct ms_v2i adj_faces = edge_adjacent_faces(&accel, start, end);
+                int adj_face = adj_faces.a;
+                int another_adj_face = adj_faces.b;
                 
                 if (adj_face == another_adj_face) {
                     ++nedges_adj_to_hole;

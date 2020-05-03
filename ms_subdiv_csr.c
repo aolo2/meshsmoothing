@@ -222,37 +222,29 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     return(result);
 }
 
-static int
-edge_adjacent_face(struct ms_accel *accel, int me, int start, int end)
+static struct ms_v2i
+edge_adjacent_faces(struct ms_accel *accel, int start, int end)
 {
-    int start_faces_from = accel->faces_starts[start];
-    int end_faces_from = accel->faces_starts[end];
+    int start_from = accel->verts_starts[start];
+    int start_to = accel->verts_starts[start + 1];
     
-    int start_faces_to = accel->faces_starts[start + 1];
-    int end_faces_to = accel->faces_starts[end + 1];
+    struct ms_v2i result = { 0 };
     
-    int nfaces_start = start_faces_to - start_faces_from;
-    int nfaces_end = end_faces_to - end_faces_from;
-    
-    int *faces = accel->faces_matrix;
-    
-    if (nfaces_start > 0 && nfaces_end > 0) {
-        for (int f1 = start_faces_from; f1 < start_faces_to; ++f1) {
-            int face = faces[f1];
-            if (face == me) {
-                continue;
-            }
+    for (int e = start_from; e < start_to; ++e) {
+        int some_end = accel->verts_matrix[e];
+        
+        if (some_end == end) {
+            int face_1 = accel->edge_indices[2 * e + 0] >> 2;
+            int face_2 = accel->edge_indices[2 * e + 1] >> 2;
             
-            for (int f2 = end_faces_from; f2 < end_faces_to; ++f2) {
-                int other_face = faces[f2];
-                if (other_face == face) {
-                    return(face);
-                }
-            }
+            result.a = face_1;
+            result.b = face_2;
+            
+            break;
         }
     }
     
-    return(me);
+    return(result);
 }
 
 static void
