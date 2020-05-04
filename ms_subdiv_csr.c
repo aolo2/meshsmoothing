@@ -16,7 +16,10 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
+            int next = vert + 1;
+            if (next == mesh.degree) {
+                next = 0;
+            }
             
             int start = mesh.faces[face * mesh.degree + vert];
             int end = mesh.faces[face * mesh.degree + next];
@@ -65,7 +68,10 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) % mesh.degree;
+            int next = vert + 1;
+            if (next == mesh.degree) {
+                next = 0;
+            }
             
             int start_edge_index = face * mesh.degree + vert;
             int end_edge_index = face * mesh.degree + next;

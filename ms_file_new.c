@@ -1,6 +1,8 @@
 static struct ms_mesh
 ms_file_obj_read_file_new(char *filename)
 {
+    TracyCZone(__FUNC__, true);
+    
     FILE *file = fopen(filename, "rb");
     assert(file);
     
@@ -106,6 +108,8 @@ ms_file_obj_read_file_new(char *filename)
     mesh.degree = 4;
     
     printf("[INFO] Loaded OBJ file: %s.\n", filename);
+    
+    TracyCZoneEnd(__FUNC__);
     
     return(mesh);
 }

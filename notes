@@ -400,3 +400,29 @@ time distribution:
 [INFO] Finished Catmull-Clark [8]
 [TIME] 3145728 vertices, 621576576 cycles, 197.593872 cycles/v
 ---
+
+--- added SPMD multithreading to init_accel_structure:count
+./build/release/ms res/cubic_torus.obj_7.obj _ 100
+[INFO] Loading OBJ file: res/cubic_torus.obj_7.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj_7.obj.
+[TIME] Runs: 100 Average: 144.9 cycles/v, Stdeviation: 7.597056
+
+init_acceleration_struct
+1T: mean 113 | median 114 | sigma 3.7
+6T: mean 66  | median 62  | sigma 7.3
+---
+
+
+--- edge points parallelization with atomic capture on old = ++nedge_pointsv is slooooow
+./build/profile/ms res/cubic_torus.obj_7.obj _ 25
+[INFO] Loading OBJ file: res/cubic_torus.obj_7.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj_7.obj.
+[TIME] Runs: 25 Average: 304.5 cycles/v, Stdeviation: 7.993815
+---
+
+--- edge points with precomputed offsets, all writing to the same array (TODO: false sharing?)
+./build/release/ms res/cubic_torus.obj_7.obj _ 25
+[INFO] Loading OBJ file: res/cubic_torus.obj_7.obj...
+[INFO] Loaded OBJ file: res/cubic_torus.obj_7.obj.
+[TIME] Runs: 25 Average: 121.9 cycles/v, Stdeviation: 6.409539
+---

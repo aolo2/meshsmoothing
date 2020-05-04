@@ -4,9 +4,15 @@
 #include "ms_file_new.c"
 
 #ifdef MT
+
+#ifndef NTHREADS
+#define NTHREADS 6
+#endif
+
 #include <omp.h>
 #include "ms_subdiv_csr_mt.c"
 #include "ms_subdiv_mt.c"
+
 #else
 #include "ms_subdiv_csr.c"
 #include "ms_subdiv.c"
@@ -26,7 +32,7 @@ main(int argc, char *argv[])
     char output_filename[512] = { 0 };
     
     bool fortex = false;
-    bool writefile = false;
+    bool writefile = true;
     
     if (argc == 4) {
         bench_itearitons = atoi(argv[3]);
@@ -107,7 +113,7 @@ main(int argc, char *argv[])
         
         stdev = sqrtf(stdev);
         
-        printf("[TIME] Runs: %d Average: %f cycles/v, Stdeviation: %f\n", bench_itearitons, avg, stdev);
+        printf("[TIME] Runs: %d Average: %.1f cycles/v, Stdeviation: %f\n", bench_itearitons, avg, stdev);
     }
     
     if (fortex) {
