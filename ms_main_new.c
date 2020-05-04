@@ -32,7 +32,7 @@ main(int argc, char *argv[])
     char output_filename[512] = { 0 };
     
     bool fortex = false;
-    bool writefile = true;
+    bool writefile = false;
     
     if (argc == 4) {
         bench_itearitons = atoi(argv[3]);

@@ -19,12 +19,16 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     int vert_base = 0;
     int nedge_pointsv = 0;
-    struct ms_v3 *new_verts = malloc(mesh.nverts * sizeof(struct ms_v3));
     int nedges = accel.verts_starts[mesh.nverts];
+    
+    struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
+    struct ms_v3 *new_verts = malloc(mesh.nverts * sizeof(struct ms_v3));
+    
     int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
     int *nedges_per_thread = malloc((nthreads + 1) * sizeof(int));
+    int *epts_work_from = malloc((nthreads + 1) * sizeof(int));
     struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
-    struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
+    
     
     memset(edge_points, -1, mesh.nfaces * mesh.degree);
     
@@ -60,48 +64,53 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
         TracyCZoneEnd(compute_face_points);
         
+        /* Edge points */
+#pragma omp master
+        {
+            TracyCZoneN(compute_offsets_for_edge_points, "compute edge point offsets", true);
+            
+            int nedges = accel.verts_starts[mesh.nverts];
+            int block_size = nedges / nthreads;
+            
+            int worker_tid = 0;
+            int expected_work = block_size;
+            int nedges_from_start = 0;
+            int work_from = 0;
+            
+            for (int s = 0; s < mesh.nverts; ++s) {
+                int from = accel.verts_starts[s];
+                int to = accel.verts_starts[s + 1];
+                int this_nedges = to - from;
+                
+                if (nedges_from_start + this_nedges >= expected_work) {
+                    nedges_per_thread[worker_tid + 1] = nedges_from_start;
+                    epts_work_from[worker_tid] = work_from;
+                    work_from = s;
+                    ++worker_tid;
+                    expected_work += block_size;
+                }
+                
+                nedges_from_start += this_nedges;
+            }
+            
+            /* propogate offsets */
+            nedges_per_thread[0] = 0;
+            nedges_per_thread[nthreads] = nedges;
+            nedge_pointsv = nedges;
+            
+            epts_work_from[nthreads] = mesh.nverts;
+            
+            TracyCZoneEnd(compute_offsets_for_edge_points);
+        }
+        
 #pragma omp barrier
         
-        /* Edge points */
         TracyCZoneN(compute_edge_points, "edge_points", true);
         
         int tid = omp_get_thread_num();
-        int block_size = mesh.nverts / nthreads;
-        
-        int this_tid_process_from = tid * block_size;
-        int this_tid_process_to = this_tid_process_from + block_size;
-        
-        if (tid == nthreads - 1) {
-            this_tid_process_to = mesh.nverts;
-        }
-        
-        int this_tid_nedges = 0;
-        
-        for (int start = this_tid_process_from; start < this_tid_process_to; ++start) {
-            int from = accel.verts_starts[start];
-            int to = accel.verts_starts[start + 1];
-            this_tid_nedges += (to - from);
-        }
-        
-        nedges_per_thread[tid + 1] = this_tid_nedges;
-        
-#pragma omp barrier
-        
-#pragma omp master
-        {
-            nedges_per_thread[0] = 0;
-            for (int t = 1; t < nthreads + 1; ++t) {
-                nedges_per_thread[t] += nedges_per_thread[t - 1];
-            }
-            
-            nedge_pointsv = nedges_per_thread[nthreads];
-        }
-        
-#pragma omp barrier
-        
         int edge_pointsv_offset = nedges_per_thread[tid];
         
-        for (int start = this_tid_process_from; start < this_tid_process_to; ++start) {
+        for (int start = epts_work_from[tid]; start < epts_work_from[tid + 1]; ++start) {
             int from = accel.verts_starts[start];
             int to = accel.verts_starts[start + 1];
             

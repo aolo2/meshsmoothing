@@ -420,9 +420,15 @@ init_acceleration_struct
 [TIME] Runs: 25 Average: 304.5 cycles/v, Stdeviation: 7.993815
 ---
 
---- edge points with precomputed offsets, all writing to the same array (TODO: false sharing?)
+--- edge points parallelization with precomputed offsets, all writing to the same array (TODO: false sharing?)
 ./build/release/ms res/cubic_torus.obj_7.obj _ 25
 [INFO] Loading OBJ file: res/cubic_torus.obj_7.obj...
 [INFO] Loaded OBJ file: res/cubic_torus.obj_7.obj.
 [TIME] Runs: 25 Average: 121.9 cycles/v, Stdeviation: 6.409539
+---
+
+--- edge points are divided poorly, try to divide not starts, but edges ---
+FAIL :((( ?
+maybe awful false sharing in edge_points[edge_index] = ... ?
+an idea: bin by write destination, not by starts
 ---
