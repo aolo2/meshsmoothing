@@ -46,7 +46,7 @@ add_edge(int *edges_from, int *edges_accum, int *edges, int *edge_indices,
 
 // init accel structure (two CSRs)
 static struct ms_accel
-init_acceleration_struct_mt(struct ms_mesh mesh)
+init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *face_points)
 {
     TracyCZone(__FUNC__, true);
     
@@ -175,41 +175,69 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     TracyCZoneEnd(count_unique_edges);
     
-    TracyCZoneN(tight_pack, "pack unique edges", true);
-    /* Tighter! */
-    int edges_head = 0;
-    int faces_head = 0;
     
-    for (int v = 0; v < mesh.nverts; ++v) {
-        int e_from = edges_from[v];
-        int e_count = edges_accum[v];
-        
-        edges_from[v] = edges_head;
-        
-        for (int i = 0; i < e_count; ++i) {
-            edges[edges_head] = edges[e_from + i];
-            edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
-            edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
-            ++edges_head;
+    f32 one_over_mesh_degree = 1.0f / mesh.degree;
+    
+#pragma omp parallel
+    {
+#pragma omp single
+        {
+            TracyCZoneN(tight_pack, "pack unique edges", true);
+            /* Tighter! */
+            int edges_head = 0;
+            int faces_head = 0;
+            
+            for (int v = 0; v < mesh.nverts; ++v) {
+                int e_from = edges_from[v];
+                int e_count = edges_accum[v];
+                
+                edges_from[v] = edges_head;
+                
+                for (int i = 0; i < e_count; ++i) {
+                    edges[edges_head] = edges[e_from + i];
+                    edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
+                    edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
+                    ++edges_head;
+                }
+            }
+            
+            edges_from[mesh.nverts] = edges_head;
+            
+            for (int v = 0; v < mesh.nverts; ++v) {
+                int f_from = faces_from[v];
+                int f_count = faces_accum[v];
+                
+                faces_from[v] = faces_head;
+                
+                for (int i = 0; i < f_count; ++i) {
+                    faces[faces_head++] = faces[f_from + i];
+                }
+            }
+            
+            faces_from[mesh.nverts] = faces_head;
+            
+            TracyCZoneEnd(tight_pack);
         }
-    }
-    
-    edges_from[mesh.nverts] = edges_head;
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
-        int f_from = faces_from[v];
-        int f_count = faces_accum[v];
         
-        faces_from[v] = faces_head;
-        
-        for (int i = 0; i < f_count; ++i) {
-            faces[faces_head++] = faces[f_from + i];
+        TracyCZoneN(compute_face_points, "face points", true);
+#pragma omp for
+        for (int face = 0; face < mesh.nfaces; ++face) {
+            struct ms_v3 fp = { 0 };
+            for (int vert = 0; vert < mesh.degree; ++vert) {
+                struct ms_v3 vertex = mesh.vertices[mesh.faces[face * mesh.degree + vert]];
+                fp.x += vertex.x;
+                fp.y += vertex.y;
+                fp.z += vertex.z;
+            }
+            
+            fp.x *= one_over_mesh_degree;
+            fp.y *= one_over_mesh_degree;
+            fp.z *= one_over_mesh_degree;
+            
+            face_points[face] = fp;
         }
+        TracyCZoneEnd(compute_face_points);
     }
-    
-    faces_from[mesh.nverts] = faces_head;
-    
-    TracyCZoneEnd(tight_pack);
     
     TracyCZoneN(return_and_free, "free memory", true);
     struct ms_accel result = { 0 };
