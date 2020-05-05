@@ -229,6 +229,31 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
 }
 
 static struct ms_v2i
+both_edge_indices(struct ms_accel *accel, int start, int end)
+{
+    int start_from = accel->verts_starts[start];
+    int start_to = accel->verts_starts[start + 1];
+    
+    struct ms_v2i result = { 0 };
+    
+    for (int e = start_from; e < start_to; ++e) {
+        int some_end = accel->verts_matrix[e];
+        
+        if (some_end == end) {
+            int index_1 = accel->edge_indices[2 * e + 0];
+            int index_2 = accel->edge_indices[2 * e + 1];
+            
+            result.a = index_1;
+            result.b = index_2;
+            
+            break;
+        }
+    }
+    
+    return(result);
+}
+
+static struct ms_v2i
 edge_adjacent_faces(struct ms_accel *accel, int start, int end)
 {
     int start_from = accel->verts_starts[start];

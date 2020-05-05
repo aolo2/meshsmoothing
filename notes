@@ -426,3 +426,15 @@ init_acceleration_struct
 [INFO] Loaded OBJ file: res/cubic_torus.obj_7.obj.
 [TIME] Runs: 25 Average: 121.9 cycles/v, Stdeviation: 6.409539
 ---
+
+'edge_points' and 'count' zones have very bad work distribution, can save like 20% if work is even
+
+--- edge_points: tried to bin work by edge count, failed ---
+see branch bin-edge-points
+---
+
+
+
+--- strange artifacts ---
+screen in vk: count edge poinst starts before face points ended = bad? seems so
+----

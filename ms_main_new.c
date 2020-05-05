@@ -34,6 +34,9 @@ main(int argc, char *argv[])
     bool fortex = false;
     bool writefile = true;
     
+    printf("[INFO] Write to file: %s\n       Generate LaTeX: %s\n",
+           (writefile ? "ENABLED" : "DISABLED"), (fortex ? "ENABLED" : "DISABLED"));
+    
     if (argc == 4) {
         bench_itearitons = atoi(argv[3]);
         if (bench_itearitons > MAX_BENCH_ITERATIONS) {
@@ -48,8 +51,8 @@ main(int argc, char *argv[])
     }
     
     if (bench_itearitons == -1) {
+        printf("[INFO] Running in REGULAR mode with %d iterations\n", iterations);
         for (int i = 0; i < iterations; ++i) {
-            
             int size = mesh.nfaces * 4;
             
             u64 before = cycles_now();
@@ -81,10 +84,14 @@ main(int argc, char *argv[])
             }
         }
     } else {
+        printf("[INFO] Running in BENCH mode with %d repeats\n", bench_itearitons);
         unsigned long long total_total_cycles = 0ULL;
         f32 iteration_cycles[MAX_BENCH_ITERATIONS];
         
         for (int i = 0; i < bench_itearitons; ++i) {
+            printf("\r[BENCH] %d/%d", i + 1, bench_itearitons);
+            fflush(stdout);
+            
             u64 before = cycles_now();
             struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
             u64 after = cycles_now();
@@ -98,6 +105,8 @@ main(int argc, char *argv[])
             iteration_cycles[i] = (f32) (after - before) / (mesh.nfaces * 4);
             total_total_cycles += (f32) (after - before) / (mesh.nfaces * 4);
         }
+        
+        printf("\n[BENCH] Done\n");
         
         f32 avg = (f32) total_total_cycles / bench_itearitons;
         f32 stdev = 0.0f;
@@ -113,7 +122,7 @@ main(int argc, char *argv[])
         
         stdev = sqrtf(stdev);
         
-        printf("[TIME] Runs: %d Average: %.1f cycles/v, Stdeviation: %f\n", bench_itearitons, avg, stdev);
+        printf("[TIME] avg: %.1f cycles/v | sigma: %.2f\n", avg, stdev);
     }
     
     if (fortex) {

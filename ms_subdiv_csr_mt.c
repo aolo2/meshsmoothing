@@ -44,24 +44,6 @@ add_edge(int *edges_from, int *edges_accum, int *edges, int *edge_indices,
     }
 }
 
-static void
-insert_edge_and_face(int *edges_from, int *edges_accum, int *edges,
-                     int *edge_indices, int edge_index,
-                     int *faces_from, int *faces_accum, int *faces,
-                     int start, int end, int face,
-                     int this_tid_process_from, int this_tid_process_to)
-{
-    if (this_tid_process_from <= start && start < this_tid_process_to) {
-        add_edge(edges_from, edges_accum, edges, edge_indices, edge_index, start, end);
-        add_face(faces_from, faces_accum, faces, face, start);
-    }
-    
-    if (this_tid_process_from <= end && end < this_tid_process_to) {
-        add_edge(edges_from, edges_accum, edges, edge_indices, edge_index, end, start);
-        add_face(faces_from, faces_accum, faces, face, end);
-    }
-}
-
 // init accel structure (two CSRs)
 static struct ms_accel
 init_acceleration_struct_mt(struct ms_mesh mesh)
@@ -167,14 +149,18 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
                 int start_edge_index = face * mesh.degree + vert;
                 int end_edge_index = face * mesh.degree + next;
                 
-                int start = mesh.faces[start_edge_index];
                 int end = mesh.faces[end_edge_index];
+                int start = mesh.faces[start_edge_index];
                 
-                insert_edge_and_face(edges_from, edges_accum, edges,
-                                     edge_indices, start_edge_index,
-                                     faces_from, faces_accum, faces,
-                                     start, end, face,
-                                     this_tid_process_from, this_tid_process_to);
+                if (this_tid_process_from <= start && start < this_tid_process_to) {
+                    add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, start, end);
+                    add_face(faces_from, faces_accum, faces, face, start);
+                }
+                
+                if (this_tid_process_from <= end && end < this_tid_process_to) {
+                    add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, end, start);
+                    add_face(faces_from, faces_accum, faces, face, end);
+                }
             }
         }
         

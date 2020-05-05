@@ -39,6 +39,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     /* Face points */
     f32 one_over_mesh_degree = 1.0f / mesh.degree;
     
+#pragma omp barrier
+    
 #pragma omp parallel
     {
         TracyCZoneN(compute_face_points, "face points", true);
@@ -60,11 +62,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
         TracyCZoneEnd(compute_face_points);
         
-#pragma omp barrier
-        
         /* Edge points */
-        TracyCZoneN(compute_edge_points, "edge_points", true);
-        
+        TracyCZoneN(count_ep_work, "count edge point work", true);
         int tid = omp_get_thread_num();
         int block_size = mesh.nverts / nthreads;
         
@@ -83,7 +82,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             this_tid_nedges += (to - from);
         }
         
+        
         nedges_per_thread[tid + 1] = this_tid_nedges;
+        TracyCZoneEnd(count_ep_work);
         
 #pragma omp barrier
         
@@ -97,9 +98,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             nedge_pointsv = nedges_per_thread[nthreads];
         }
         
-#pragma omp barrier
         
+#pragma omp barrier
+        TracyCZoneN(compute_edge_points, "edge_points", true);
         int edge_pointsv_offset = nedges_per_thread[tid];
+        
         
         for (int start = this_tid_process_from; start < this_tid_process_to; ++start) {
             int from = accel.verts_starts[start];
@@ -111,6 +114,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
                 int edge_index_1 = accel.edge_indices[2 * e + 0];
                 int edge_index_2 = accel.edge_indices[2 * e + 1];
+                
+                //struct ms_v3 startv = accel.edge_vertices[2 * e + 0];
+                //struct ms_v3 endv = accel.edge_vertices[2 * e + 1];
                 
                 struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
@@ -143,13 +149,17 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
         }
         
+        
         TracyCZoneEnd(compute_edge_points);
         
 #pragma omp barrier
         
         TracyCZoneN(update_positions, "update old points", true);
-#pragma omp for
+        //int DBG_count = 0;
+        
+#pragma omp for schedule(static)
         for (int v = 0; v < mesh.nverts; ++v) {
+            //++DBG_count;
             struct ms_v3 vertex = mesh.vertices[v];
             struct ms_v3 new_vert;
             
@@ -174,7 +184,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                     struct ms_v3 endv = mesh.vertices[end];
                     
                     /* Only take into account edges that are also on the edge of a hole */
-                    struct ms_v2i adj_faces = edge_adjacent_faces(&accel, start, end);
+                    struct ms_v2i adj_faces = edge_adjacent_faces(&accel, v, end);
                     int adj_face = adj_faces.a;
                     int another_adj_face = adj_faces.b;
                     
@@ -240,10 +250,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             
             new_verts[v] = new_vert;
         }
+        
+        //printf("%d] %d\n", tid, DBG_count);
         TracyCZoneEnd(update_positions);
         
         
-#pragma omp barrier
 #pragma omp master
         {
             TracyCZoneN(alloc_new_mesh, "allocate new mesh", true);

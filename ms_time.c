@@ -1,5 +1,5 @@
 static u64
-usec_now()
+usec_now(void)
 {
     u64 result;
     struct timespec ts;
@@ -11,7 +11,7 @@ usec_now()
 }
 
 static u64
-cycles_now()
+cycles_now(void)
 {
     u32 hi, lo;
     __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
