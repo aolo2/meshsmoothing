@@ -152,12 +152,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
         TracyCZoneEnd(compute_edge_points);
         
-#pragma omp barrier
-        
         TracyCZoneN(update_positions, "update old points", true);
         //int DBG_count = 0;
         
-#pragma omp for schedule(static)
+#pragma omp for schedule(guided)
         for (int v = 0; v < mesh.nverts; ++v) {
             //++DBG_count;
             struct ms_v3 vertex = mesh.vertices[v];
