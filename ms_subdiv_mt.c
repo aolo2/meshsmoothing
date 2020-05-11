@@ -278,33 +278,30 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             
             vert_base = mesh.nverts + nedge_pointsv;
             
+            memcpy(new_mesh.vertices + vert_base, face_points, mesh.nfaces * sizeof(struct ms_v3));
+            
             TracyCZoneEnd(copy_data);
         }
         
 #pragma omp barrier
+        int edgep_base = mesh.nverts;
         
         /* Subdivide */
         TracyCZoneNS(subdivide, "do subdivision", true, CALLSTACK_DEPTH);
 #pragma omp for
-        for (int face = 0; face < mesh.nfaces; ++face) {
-            struct ms_v3 face_point_abcd = face_points[face];
+        for (int face = 0; face < mesh.nfaces * 4; face += 4) {
+            int face_base = face << 2;
+            int facep_index = vert_base + (face >> 2);
             
-            int face_base = face * 16;
-            int edgep_base = mesh.nverts;
-            int facep_index = vert_base + face;
+            int edge_point_ab = edgep_base + edge_points[face + 0];
+            int edge_point_bc = edgep_base + edge_points[face + 1];
+            int edge_point_cd = edgep_base + edge_points[face + 2];
+            int edge_point_da = edgep_base + edge_points[face + 3];
             
-            int edge_point_ab = edgep_base + edge_points[face * mesh.degree + 0];
-            int edge_point_bc = edgep_base + edge_points[face * mesh.degree + 1];
-            int edge_point_cd = edgep_base + edge_points[face * mesh.degree + 2];
-            int edge_point_da = edgep_base + edge_points[face * mesh.degree + 3];
-            
-            int a = mesh.faces[face * mesh.degree + 0];
-            int b = mesh.faces[face * mesh.degree + 1];
-            int c = mesh.faces[face * mesh.degree + 2];
-            int d = mesh.faces[face * mesh.degree + 3];
-            
-            /* Add face point */
-            new_mesh.vertices[facep_index] = face_point_abcd;
+            int a = mesh.faces[face + 0];
+            int b = mesh.faces[face + 1];
+            int c = mesh.faces[face + 2];
+            int d = mesh.faces[face + 3];
             
             /* Add faces */
             {

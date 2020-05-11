@@ -441,4 +441,51 @@ screen in vk: count edge poinst starts before face points ended = bad? seems so
 
 --- overlapped edge_points with update_old: win
 --- overlapped face points with init_acceleration_struct: this gives negative results :(
----
+
+--- reverted face points masking...
+
+--- ok, time to address the poor scaling.
+1T:
+                  (mean, med,  dev)
+- count all edges (20.5, 19.9, 2.9)
+- count           (86.7, 86.5, 1.4)
+- face points     (6.8,  6.7,  0.3)
+- edge_points     (61.2, 61.2, 0.7)
+- update old      (35.2, 35.1, 0.8)
+- do subdiv       (13.5, 13.5, 0.2)
+
+6T:
+                  (mean, med,  dev)
+- count all edges (7.8,  7.6,  1.1)
+- count           (31.7, 30.0, 5.9)
+- face points     (3.3,  3.2,  0.5)
+- edge_points     (25.1, 27.3, 8.5)
+- update old      (12.9, 11.0, 8.4)
+- do subdiv       (10.4, 10.4, 0.3)
+
+
+do subdiv is an obvious anomaly, fully independent but just 30% win over 1T??
+- extracted subdivision step into "ds_bench.c"
+- still very bad speedup
+- /* face 3 */
+  new_mesh.faces[face_base + 12] = d;
+  new_mesh.faces[face_base + 13] = edge_point_da;
+  new_mesh.faces[face_base + 14] = facep_index;
+  new_mesh.faces[face_base + 15] = edge_point_cd;
+  these 4 instructions take up >60% of total cycles
+
+  single thread is not nearly as bad (~40%)
+
+- about 80% of DC misses in those 4 instructions, why?
+- dc miss rates and ratios are same for all 16 stores, but the DC MISS ops are all in the last four
+store forwarding?
+
+- splitting the loop into two: face points and new faces helps a bit
+- using memcpy instead of the first loop helps a lot!
+- immediate offsets (face_base + xx) vs face_base++ generate different asm, but perform the same
+
+- 4 faces of 4 ints total to one cache line. maybe alignments of new_mesh.faces?
+- nope
+
+- PRETTY SURE WE ARE LIMITED BY STORES (cache is ok (likwid), and reducing store count gives 3x speedup)
+
