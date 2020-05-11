@@ -184,9 +184,9 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
         
         /* Pack unique edges while computing face points */
         if (tid > 0) {
-            //TracyCZoneNS(compute_face_points, "face points", true, CALLSTACK_DEPTH);
+            TracyCZoneNS(compute_face_points, "face points", true, CALLSTACK_DEPTH);
             
-#pragma omp for
+#pragma omp for schedule(guided) nowait
             for (int face = 0; face < mesh.nfaces; ++face) {
                 struct ms_v3 fp = { 0 };
                 for (int vert = 0; vert < mesh.degree; ++vert) {
@@ -201,12 +201,11 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
                 fp.z *= one_over_mesh_degree;
                 
                 face_points[face] = fp;
-                
             }
             
-            //TracyCZoneEnd(compute_face_points);
+            TracyCZoneEnd(compute_face_points);
         } else {
-            //TracyCZoneNS(tight_pack, "pack unique edges", true, CALLSTACK_DEPTH);
+            TracyCZoneNS(tight_pack, "pack unique edges", true, CALLSTACK_DEPTH);
             
             int edges_head = 0;
             int faces_head = 0;
@@ -240,7 +239,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
             
             faces_from[mesh.nverts] = faces_head;
             
-            //TracyCZoneEnd(tight_pack);
+            TracyCZoneEnd(tight_pack);
         }
     }
     
