@@ -1,7 +1,7 @@
 static struct ms_mesh
 ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 {
-    TracyCZone(__FUNC__, true);
+    TracyCZoneS(__FUNC__, true, CALLSTACK_DEPTH);
     
     int nthreads = NTHREADS;
     omp_set_num_threads(NTHREADS);
@@ -11,7 +11,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     /* Construct acceleration structure */
     struct ms_accel accel = init_acceleration_struct_and_face_points_mt(mesh, face_points);
     
-    TracyCZoneN(alloc_everything, "allocate", true);
+    TracyCZoneNS(alloc_everything, "allocate", true, CALLSTACK_DEPTH);
     
     struct ms_mesh new_mesh = { 0 };
     new_mesh.nfaces = mesh.nfaces * 4;
@@ -28,11 +28,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     memset(edge_points, -1, mesh.nfaces * mesh.degree);
     
-    TracyCAlloc(edge_points, mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
-    TracyCAlloc(edge_pointsv, nedges * 2 * sizeof(struct ms_v3));
-    TracyCAlloc(new_verts, mesh.nverts * sizeof(struct ms_v3));
-    TracyCAlloc(face_points, mesh.nfaces * sizeof(struct ms_v3));
-    TracyCAlloc(new_mesh.faces, new_mesh.nfaces * 4 * sizeof(int));
+    TracyCAllocS(edge_points, mesh.nfaces * mesh.degree * sizeof(struct ms_v3), CALLSTACK_DEPTH);
+    TracyCAllocS(edge_pointsv, nedges * 2 * sizeof(struct ms_v3), CALLSTACK_DEPTH);
+    TracyCAllocS(new_verts, mesh.nverts * sizeof(struct ms_v3), CALLSTACK_DEPTH);
+    TracyCAllocS(face_points, mesh.nfaces * sizeof(struct ms_v3), CALLSTACK_DEPTH);
+    TracyCAllocS(new_mesh.faces, new_mesh.nfaces * 4 * sizeof(int), CALLSTACK_DEPTH);
     
     TracyCZoneEnd(alloc_everything);
     
@@ -42,7 +42,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 #pragma omp parallel
     {
         /* Edge points */
-        TracyCZoneN(count_ep_work, "count edge point work", true);
+        TracyCZoneNS(count_ep_work, "count edge point work", true, CALLSTACK_DEPTH);
         int tid = omp_get_thread_num();
         int block_size = mesh.nverts / nthreads;
         
@@ -79,7 +79,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
         
 #pragma omp barrier
-        TracyCZoneN(compute_edge_points, "edge_points", true);
+        TracyCZoneNS(compute_edge_points, "edge_points", true, CALLSTACK_DEPTH);
         int edge_pointsv_offset = nedges_per_thread[tid];
         
         
@@ -131,7 +131,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
         TracyCZoneEnd(compute_edge_points);
         
-        TracyCZoneN(update_positions, "update old points", true);
+        TracyCZoneNS(update_positions, "update old points", true, CALLSTACK_DEPTH);
         //int DBG_count = 0;
         
 #pragma omp for schedule(guided)
@@ -234,18 +234,18 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
 #pragma omp master
         {
-            TracyCZoneN(alloc_new_mesh, "allocate new mesh", true);
+            TracyCZoneNS(alloc_new_mesh, "allocate new mesh", true, CALLSTACK_DEPTH);
             
             /* Updated vertices + edge points + 1 face point per face */
             new_mesh.nverts = mesh.nverts + nedge_pointsv + mesh.nfaces;
             new_mesh.vertices = malloc(new_mesh.nverts * sizeof(struct ms_v3));
             
-            TracyCAlloc(new_mesh.vertices, new_mesh.nverts * sizeof(struct ms_v3));
+            TracyCAllocS(new_mesh.vertices, new_mesh.nverts * sizeof(struct ms_v3), CALLSTACK_DEPTH);
             
             TracyCZoneEnd(alloc_new_mesh);
             
             
-            TracyCZoneN(copy_data, "copy unique points", true);
+            TracyCZoneNS(copy_data, "copy unique points", true, CALLSTACK_DEPTH);
             
             memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
             memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, nedge_pointsv * sizeof(struct ms_v3));
@@ -258,7 +258,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 #pragma omp barrier
         
         /* Subdivide */
-        TracyCZoneN(subdivide, "do subdivision", true);
+        TracyCZoneNS(subdivide, "do subdivision", true, CALLSTACK_DEPTH);
 #pragma omp for
         for (int face = 0; face < mesh.nfaces; ++face) {
             struct ms_v3 face_point_abcd = face_points[face];

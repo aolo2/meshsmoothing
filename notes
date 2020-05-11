@@ -438,3 +438,8 @@ see branch bin-edge-points
 --- strange artifacts ---
 screen in vk: count edge poinst starts before face points ended = bad? seems so
 ----
+
+--- overlapped edge_points with update_old: win
+
+
+--- overlapped face points with init_acceleration_struct: ???

@@ -48,7 +48,7 @@ add_edge(int *edges_from, int *edges_accum, int *edges, int *edge_indices,
 static struct ms_accel
 init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *face_points)
 {
-    TracyCZone(__FUNC__, true);
+    TracyCZoneS(__FUNC__, true, CALLSTACK_DEPTH);
     
     int nthreads = NTHREADS;
     
@@ -56,19 +56,19 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
     int nfaces = nedges;
     
     int *edges_from = calloc(1, (mesh.nverts + 1) * sizeof(int));
-    TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
+    TracyCAllocS(edges_from, (mesh.nverts + 1) * sizeof(int), CALLSTACK_DEPTH);
     
     int **edges_from_locals = malloc(nthreads * sizeof(int *));
-    TracyCAlloc(edges_from_locals, nthreads * sizeof(int *));
+    TracyCAllocS(edges_from_locals, nthreads * sizeof(int *), CALLSTACK_DEPTH);
     
 #pragma omp parallel
     {
-        TracyCZoneN(count_initial_offsets, "count all edges", true);
+        TracyCZoneNS(count_initial_offsets, "count all edges", true, CALLSTACK_DEPTH);
         
         int tid = omp_get_thread_num();
         
         edges_from_locals[tid] = calloc(1, (mesh.nverts + 1) * sizeof(int));
-        TracyCAlloc(edges_from_locals[tid], (mesh.nverts + 1) * sizeof(int));
+        TracyCAllocS(edges_from_locals[tid], (mesh.nverts + 1) * sizeof(int), CALLSTACK_DEPTH);
         
 #pragma omp for
         for (int face = 0; face < mesh.nfaces; ++face) {
@@ -86,7 +86,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
         TracyCZoneEnd(count_initial_offsets);
     }
     
-    TracyCZoneN(reduce_offsets, "reduce offsets", true);
+    TracyCZoneNS(reduce_offsets, "reduce offsets", true, CALLSTACK_DEPTH);
     for (int t = 0; t < nthreads; ++t) {
         for (int v = 1; v < mesh.nverts + 1; ++v) {
             edges_from[v] += edges_from_locals[t][v];
@@ -103,9 +103,9 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
     int *faces_from = edges_from;
     
     
-    TracyCZoneN(count_unique_edges, "alloc and count unique edges", true);
+    TracyCZoneNS(count_unique_edges, "alloc and count unique edges", true, CALLSTACK_DEPTH);
     
-    TracyCZoneN(alloc_unique_edges, "alloc", true);
+    TracyCZoneNS(alloc_unique_edges, "alloc", true, CALLSTACK_DEPTH);
     int *edges = malloc(nedges * sizeof(int));
     int *faces = malloc(nfaces * sizeof(int));
     
@@ -116,21 +116,21 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
     int *edge_faces = malloc(nedges * sizeof(int));
     int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
     
-    TracyCAlloc(edges, nedges * sizeof(int));
-    TracyCAlloc(faces, nedges * sizeof(int));
+    TracyCAllocS(edges, nedges * sizeof(int), CALLSTACK_DEPTH);
+    TracyCAllocS(faces, nedges * sizeof(int), CALLSTACK_DEPTH);
     
-    TracyCAlloc(edges_accum, mesh.nverts * sizeof(int));
-    TracyCAlloc(faces_accum, mesh.nverts * sizeof(int));
+    TracyCAllocS(edges_accum, mesh.nverts * sizeof(int), CALLSTACK_DEPTH);
+    TracyCAllocS(faces_accum, mesh.nverts * sizeof(int), CALLSTACK_DEPTH);
     
-    TracyCAlloc(edge_indices, 2 * nedges * sizeof(int));
-    TracyCAlloc(edge_faces, nedges * sizeof(int));
-    TracyCAlloc(edge_indices_accum, mesh.nverts * sizeof(int));
+    TracyCAllocS(edge_indices, 2 * nedges * sizeof(int), CALLSTACK_DEPTH);
+    TracyCAllocS(edge_faces, nedges * sizeof(int), CALLSTACK_DEPTH);
+    TracyCAllocS(edge_indices_accum, mesh.nverts * sizeof(int), CALLSTACK_DEPTH);
     
     TracyCZoneEnd(alloc_unique_edges);
     
 #pragma omp parallel
     {
-        TracyCZoneN(count_unique_edges_count, "count", true);
+        TracyCZoneNS(count_unique_edges_count, "count", true, CALLSTACK_DEPTH);
         
         int tid = omp_get_thread_num();
         int block_size = mesh.nverts / nthreads;
@@ -169,7 +169,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
     
     faces_from = malloc((mesh.nverts + 1) * sizeof(int));
     
-    TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
+    TracyCAllocS(faces_from, (mesh.nverts + 1) * sizeof(int), CALLSTACK_DEPTH);
     
     memcpy(faces_from, edges_from, (mesh.nverts + 1) * sizeof(int));
     
@@ -182,7 +182,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
     {
 #pragma omp single
         {
-            TracyCZoneN(tight_pack, "pack unique edges", true);
+            TracyCZoneNS(tight_pack, "pack unique edges", true, CALLSTACK_DEPTH);
             /* Tighter! */
             int edges_head = 0;
             int faces_head = 0;
@@ -219,7 +219,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
             TracyCZoneEnd(tight_pack);
         }
         
-        TracyCZoneN(compute_face_points, "face points", true);
+        TracyCZoneNS(compute_face_points, "face points", true, CALLSTACK_DEPTH);
 #pragma omp for
         for (int face = 0; face < mesh.nfaces; ++face) {
             struct ms_v3 fp = { 0 };
@@ -239,7 +239,7 @@ init_acceleration_struct_and_face_points_mt(struct ms_mesh mesh, struct ms_v3 *f
         TracyCZoneEnd(compute_face_points);
     }
     
-    TracyCZoneN(return_and_free, "free memory", true);
+    TracyCZoneNS(return_and_free, "free memory", true, CALLSTACK_DEPTH);
     struct ms_accel result = { 0 };
     
     result.faces_starts = faces_from;

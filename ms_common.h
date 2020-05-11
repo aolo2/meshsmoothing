@@ -9,13 +9,19 @@
 #include <math.h>    /* for sqrtf */
 
 #ifdef PROFILE
+#define CALLSTACK_DEPTH 3
 #include "external/tracy/TracyC.h"
 #else
-#define TracyCZone(a, b)
-#define TracyCZoneN(a, b, c)
-#define TracyCZoneEnd(a)
-#define TracyCAlloc(a, b)
-#define TracyCFree(a)
+#define TracyCZone(...)
+#define TracyCZoneN(...)
+#define TracyCZoneEnd(...)
+#define TracyCAlloc(...)
+#define TracyCFree(...)
+#define TracyCZoneS(...)
+#define TracyCZoneNS(...)
+#define TracyCZoneEndS(...)
+#define TracyCAllocS(...)
+#define TracyCFreeS(...)
 #endif
 
 #define MAX_BENCH_ITERATIONS 100

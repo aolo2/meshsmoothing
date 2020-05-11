@@ -32,7 +32,7 @@ main(int argc, char *argv[])
     char output_filename[512] = { 0 };
     
     bool fortex = false;
-    bool writefile = true;
+    bool writefile = false;
     
     printf("[INFO] Write to file: %s\n       Generate LaTeX: %s\n",
            (writefile ? "ENABLED" : "DISABLED"), (fortex ? "ENABLED" : "DISABLED"));

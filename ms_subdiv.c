@@ -13,6 +13,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCAlloc(face_points, mesh.nfaces * sizeof(struct ms_v3));
     
     TracyCZoneN(compute_face_points, "face points", true);
+    
+    
     for (int face = 0; face < mesh.nfaces; ++face) {
         struct ms_v3 fp = { 0 };
         for (int vert = 0; vert < mesh.degree; ++vert) {
@@ -28,6 +30,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
         face_points[face] = fp;
     }
+    
+    
     TracyCZoneEnd(compute_face_points);
     
     /* Edge points */
@@ -45,7 +49,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(alloc_edge_points);
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
-#if 0
     for (int start = 0; start < mesh.nverts; ++start) {
         int from = accel.verts_starts[start];
         int to = accel.verts_starts[start + 1];
@@ -87,49 +90,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             ++nedge_pointsv;
         }
     }
-#else
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = vert + 1;
-            if (next == mesh.degree) {
-                next = 0;
-            }
-            
-            int start = mesh.faces[face * mesh.degree + vert];
-            int end = mesh.faces[face * mesh.degree + next];
-            
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[end];
-            
-            struct ms_v2i indices = both_edge_indices(&accel, start, end);
-            int me = indices.a >> 2;
-            int adj = indices.b >> 2;
-            
-            struct ms_v3 edge_point;
-            
-            if (me != adj) {
-                struct ms_v3 face_point_me = face_points[me];
-                struct ms_v3 face_point_adj = face_points[adj];
-                
-                edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
-                edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
-                edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
-            } else {
-                /* This is an edge of a hole */
-                edge_point.x = (startv.x + endv.x) * 0.5f;
-                edge_point.y = (startv.y + endv.y) * 0.5f;
-                edge_point.z = (startv.z + endv.z) * 0.5f;
-            }
-            
-            edge_pointsv[nedge_pointsv] = edge_point;
-            
-            edge_points[indices.a] = nedge_pointsv;
-            edge_points[indices.b] = nedge_pointsv; /* REMINDER: edge_index_2 might be equal to edge_index_1 if the edge is unique */
-            
-            ++nedge_pointsv;
-        }
-    }
-#endif
     TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
