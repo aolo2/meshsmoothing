@@ -440,4 +440,5 @@ screen in vk: count edge poinst starts before face points ended = bad? seems so
 ----
 
 --- overlapped edge_points with update_old: win
---- overlapped face points with init_acceleration_struct: 1% win :(
+--- overlapped face points with init_acceleration_struct: this gives negative results :(
+---
