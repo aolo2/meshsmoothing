@@ -9,27 +9,27 @@
 #include <math.h>    /* for sqrtf */
 
 #ifdef PROFILE
-/**/#include "external/tracy/TracyC.h"
-/**/#ifndef NOSTACK
-/******/#define CALLSTACK_DEPTH 3
-/**/#else
-/******/#undef TracyCZoneS
-/******/#undef TracyCZoneNS
-/******/#undef TracyCAllocS
-/******/#define TracyCZoneS(a, b, c) TracyCZone(a, b)
-/******/#define TracyCZoneNS(a, b, c, d) TracyCZoneN(a, b, c)
-/******/#define TracyCAllocS(a, b, c) TracyCAlloc(a, b)
-/**/#endif
+#    include "external/tracy/TracyC.h"
+#    ifndef NOSTACK2
+#        define CALLSTACK_DEPTH 3
+#    else
+#        undef TracyCZoneS
+#        undef TracyCZoneNS
+#        undef TracyCAllocS
+#        define TracyCZoneS(a, b, c) TracyCZone(a, b)
+#        define TracyCZoneNS(a, b, c, d) TracyCZoneN(a, b, c)
+#        define TracyCAllocS(a, b, c) TracyCAlloc(a, b)
+#    endif
 #else
-/**/#define TracyCZone(...)
-/**/#define TracyCZoneN(...)
-/**/#define TracyCZoneEnd(...)
-/**/#define TracyCAlloc(...)
-/**/#define TracyCFree(...)
-/**/#define TracyCZoneS(...)
-/**/#define TracyCZoneNS(...)
-/**/#define TracyCAllocS(...)
-/**/#define TracyCFreeS(...)
+#    define TracyCZone(...)
+#    define TracyCZoneN(...)
+#    define TracyCZoneEnd(...)
+#    define TracyCAlloc(...)
+#    define TracyCFree(...)
+#    define TracyCZoneS(...)
+#    define TracyCZoneNS(...)
+#    define TracyCAllocS(...)
+#    define TracyCFreeS(...)
 #endif
 
 #define MAX_BENCH_ITERATIONS 100
