@@ -65,7 +65,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
 #pragma omp parallel
     {
-        TracyCZoneNS(count_initial_offsets, "count all edges", true, CALLSTACK_DEPTH);
+        TracyCZoneNS(count_initial_offsets, "count offsets (local)", true, CALLSTACK_DEPTH);
         
         int tid = omp_get_thread_num();
         
@@ -84,8 +84,13 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
                 edges_from_locals[tid][end + 1]++;
             }
         }
-        
         TracyCZoneEnd(count_initial_offsets);
+        
+        TracyCZoneNS(propogate_local_offsets, "propogate offsets (local)", true, CALLSTACK_DEPTH);
+        for (int v = 1; v < mesh.nverts + 1; ++v) {
+            edges_from_locals[tid][v] += edges_from_locals[tid][v - 1];
+        }
+        TracyCZoneEnd(propogate_local_offsets);
     }
     
     for (int t = 0; t < nthreads; ++t) {
@@ -101,13 +106,6 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
             TracyCZoneEnd(reduce_offsets);
         }
     }
-    
-    TracyCZoneN(propogate_offsets, "propogate offsets", true);
-    
-    for (int v = 1; v < mesh.nverts + 1; ++v) {
-        edges_from[v] += edges_from[v - 1];
-    }
-    TracyCZoneEnd(propogate_offsets);
     
     int *faces_from = edges_from;
     
@@ -207,39 +205,58 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     
     /* Pack unique edges while computing face points */
-    TracyCZoneNS(tight_pack, "pack unique edges", true, CALLSTACK_DEPTH);
+    TracyCZoneNS(tight_pack, "pack acceleration structure", true, CALLSTACK_DEPTH);
     
-    int edges_head = 0;
-    int faces_head = 0;
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
-        int e_from = edges_from[v];
-        int e_count = edges_accum[v];
-        
-        edges_from[v] = edges_head;
-        
-        for (int i = 0; i < e_count; ++i) {
-            edges[edges_head] = edges[e_from + i];
-            edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
-            edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
-            ++edges_head;
+#pragma omp parallel
+    {
+#pragma omp sections
+        {
+#pragma omp section
+            {
+                TracyCZoneNS(tight_pack_edges, "pack edges", true, CALLSTACK_DEPTH);
+                
+                int edges_head = 0;
+                
+                for (int v = 0; v < mesh.nverts; ++v) {
+                    int e_from = edges_from[v];
+                    int e_count = edges_accum[v];
+                    
+                    edges_from[v] = edges_head;
+                    
+                    for (int i = 0; i < e_count; ++i) {
+                        edges[edges_head] = edges[e_from + i];
+                        edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
+                        edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
+                        ++edges_head;
+                    }
+                }
+                edges_from[mesh.nverts] = edges_head;
+                
+                TracyCZoneEnd(tight_pack_edges);
+            }
+            
+#pragma omp section
+            {
+                TracyCZoneNS(tight_pack_faces, "pack faces", true, CALLSTACK_DEPTH);
+                
+                int faces_head = 0;
+                for (int v = 0; v < mesh.nverts; ++v) {
+                    int f_from = faces_from[v];
+                    int f_count = faces_accum[v];
+                    
+                    faces_from[v] = faces_head;
+                    
+                    for (int i = 0; i < f_count; ++i) {
+                        faces[faces_head++] = faces[f_from + i];
+                    }
+                }
+                faces_from[mesh.nverts] = faces_head;
+                
+                TracyCZoneEnd(tight_pack_faces);
+            }
         }
     }
     
-    edges_from[mesh.nverts] = edges_head;
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
-        int f_from = faces_from[v];
-        int f_count = faces_accum[v];
-        
-        faces_from[v] = faces_head;
-        
-        for (int i = 0; i < f_count; ++i) {
-            faces[faces_head++] = faces[f_from + i];
-        }
-    }
-    
-    faces_from[mesh.nverts] = faces_head;
     
     TracyCZoneEnd(tight_pack);
     

@@ -534,3 +534,8 @@ bad too: 60% mp taken
 
 
 --- IDEA: mb fast path for 4 adjacent edjes and 4 adjacent faces?
+fail
+
+
+--- parallel "reduce offsets" and "copy unique points" - small wins
+--- parallel "propogate offsets" and 2 sections in "tight pack" - small wins too
