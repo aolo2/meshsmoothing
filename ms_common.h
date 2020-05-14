@@ -30,6 +30,7 @@
 #    define TracyCZoneNS(...)
 #    define TracyCAllocS(...)
 #    define TracyCFreeS(...)
+#    define TracyCMessage(...)
 #endif
 
 #define MAX_BENCH_ITERATIONS 100

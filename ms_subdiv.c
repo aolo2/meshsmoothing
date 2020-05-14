@@ -10,6 +10,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
     f32 one_over_mesh_degree = 1.0f / mesh.degree;
     
+    assert(face_points);
+    
     TracyCAlloc(face_points, mesh.nfaces * sizeof(struct ms_v3));
     
     TracyCZoneN(compute_face_points, "face points", true);
@@ -40,6 +42,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     int nedge_pointsv = 0;
     int nedges = accel.verts_starts[mesh.nverts];
     struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
+    
+    assert(edge_points);
+    assert(edge_pointsv);
     
     memset(edge_points, -1, mesh.nfaces * mesh.degree);
     
@@ -94,6 +99,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     /* Update points */
     struct ms_v3 *new_verts = malloc(mesh.nverts * sizeof(struct ms_v3));
+    assert(new_verts);
     
     TracyCAlloc(new_verts, mesh.nverts * sizeof(struct ms_v3));
     
@@ -202,6 +208,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     new_mesh.faces = malloc(new_mesh.nfaces * 4 * sizeof(int));
     new_mesh.degree = 4;
+    
+    assert(new_mesh.vertices);
+    assert(new_mesh.faces);
+    
     TracyCAlloc(new_mesh.vertices, new_mesh.nverts * sizeof(struct ms_v3));
     TracyCAlloc(new_mesh.faces, new_mesh.nfaces * 4 * sizeof(int));
     

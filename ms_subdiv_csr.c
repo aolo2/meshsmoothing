@@ -10,6 +10,8 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
     TracyCZoneEnd(alloc_initial_offsets);
     
+    assert(edges_from);
+    
     TracyCZoneN(count_initial_offsets, "count all edges", true);
     int nedges = 0;
     int nfaces = 0;
@@ -51,6 +53,12 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     int *edge_indices = malloc(2 * nedges * sizeof(int));
     int *edge_faces = malloc(nedges * sizeof(int));
     int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
+    
+    assert(edges);
+    assert(faces);
+    assert(edge_indices_accum);
+    assert(edge_indices);
+    assert(edge_faces);
     
     TracyCAlloc(edges, nedges * sizeof(int));
     TracyCAlloc(faces, nedges * sizeof(int));
@@ -160,6 +168,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     faces_from = malloc((mesh.nverts + 1) * sizeof(int));
     
+    assert(faces_from);
     TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
     
     memcpy(faces_from, edges_from, (mesh.nverts + 1) * sizeof(int));

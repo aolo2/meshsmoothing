@@ -4,7 +4,7 @@ MODE = D
 CC = gcc
 BUILD_PATH = build/profile
 
-CFLAGS += -O2 -g -Wall -Wextra -Werror -march=native -DNOSTACK2 -DPROFILE -DTRACY_ENABLE -DTRACY_NO_EXIT -I./lib
+CFLAGS += -O2 -g -Wall -Wextra -Werror -march=native -DPROFILE -DTRACY_ENABLE -DTRACY_NO_EXIT -I./lib -DNOSTACK2
 LDFLAGS += -lX11 -lXext -lm -ldl -lpthread
 
 CPP = g++

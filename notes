@@ -488,4 +488,49 @@ store forwarding?
 - nope
 
 - PRETTY SURE WE ARE LIMITED BY STORES (cache is ok (likwid), and reducing store count gives 3x speedup)
+-
 
+
+
+- peers said to stop, but... inspecting assembly for AVG DC miss latency:
+
+edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
+goes straight to RAM (avg 400 cycles)
+
+struct ms_v3 endv = mesh.vertices[end];
+is bad too
+
+avg_face_point.x += fp.x;
+all miss too
+
+init_accel_struct:
+if (edges[e] == end) {
+25 cycles: L3?
+
+if (faces[f] == face) {
+about the same (37 cycles)
+
+second if (edges[e] == end) {
+even worse: 145 cycles
+
+if (faces[f] == face) {
+too
+
+
+
+edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index;
+is SLOOOOW: 1400(!) avg lat
+
+second edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index;
+is even slower (!)
+
+
+if (this_tid_process_from <= end && end < this_tid_process_to) {
+is 33% mispredict taken
+
+
+for (int i = 0; i < adj_faces_count; ++i) {
+bad too: 60% mp taken
+
+
+--- IDEA: mb fast path for 4 adjacent edjes and 4 adjacent faces?

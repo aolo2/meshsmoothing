@@ -8,6 +8,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
     
+    assert(face_points);
+    
     /* Construct acceleration structure */
     struct ms_accel accel = init_acceleration_struct_mt(mesh);
     
@@ -18,6 +20,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     new_mesh.faces = malloc(new_mesh.nfaces * 4 * sizeof(int));
     new_mesh.degree = 4;
     
+    assert(new_mesh.faces);
+    
     int vert_base = 0;
     int nedge_pointsv = 0;
     struct ms_v3 *new_verts = malloc(mesh.nverts * sizeof(struct ms_v3));
@@ -25,6 +29,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
     int *nedges_per_thread = malloc((nthreads + 1) * sizeof(int));
     struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
+    
+    assert(new_verts);
+    assert(edge_points);
+    assert(nedges_per_thread);
+    assert(edge_pointsv);
     
     memset(edge_points, -1, mesh.nfaces * mesh.degree);
     
@@ -63,10 +72,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         }
         
         TracyCZoneEnd(compute_face_points);
-    }
-    
-#pragma omp parallel
-    {
+        
         /* Edge points */
         TracyCZoneNS(count_ep_work, "count edge point work", true, CALLSTACK_DEPTH);
         int tid = omp_get_thread_num();
@@ -93,7 +99,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
 #pragma omp barrier
         
-#pragma omp master
+#pragma omp single
         {
             nedges_per_thread[0] = 0;
             for (int t = 1; t < nthreads + 1; ++t) {
@@ -108,23 +114,19 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         TracyCZoneNS(compute_edge_points, "edge_points", true, CALLSTACK_DEPTH);
         int edge_pointsv_offset = nedges_per_thread[tid];
         
-        
         for (int start = this_tid_process_from; start < this_tid_process_to; ++start) {
+            struct ms_v3 startv = mesh.vertices[start];
+            
             int from = accel.verts_starts[start];
             int to = accel.verts_starts[start + 1];
             
             for (int e = from; e < to; ++e) {
                 int end = accel.verts_matrix[e];
+                struct ms_v3 endv = mesh.vertices[end];
                 
                 /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
                 int edge_index_1 = accel.edge_indices[2 * e + 0];
                 int edge_index_2 = accel.edge_indices[2 * e + 1];
-                
-                //struct ms_v3 startv = accel.edge_vertices[2 * e + 0];
-                //struct ms_v3 endv = accel.edge_vertices[2 * e + 1];
-                
-                struct ms_v3 startv = mesh.vertices[start];
-                struct ms_v3 endv = mesh.vertices[end];
                 
                 int face = edge_index_1 >> 2;
                 int adj  = edge_index_2 >> 2;
@@ -160,7 +162,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         TracyCZoneNS(update_positions, "update old points", true, CALLSTACK_DEPTH);
         //int DBG_count = 0;
         
-#pragma omp for schedule(guided)
+#pragma omp for
         for (int v = 0; v < mesh.nverts; ++v) {
             //++DBG_count;
             struct ms_v3 vertex = mesh.vertices[v];
@@ -266,6 +268,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             new_mesh.nverts = mesh.nverts + nedge_pointsv + mesh.nfaces;
             new_mesh.vertices = malloc(new_mesh.nverts * sizeof(struct ms_v3));
             
+            assert(new_mesh.vertices);
+            
             TracyCAllocS(new_mesh.vertices, new_mesh.nverts * sizeof(struct ms_v3), CALLSTACK_DEPTH);
             
             TracyCZoneEnd(alloc_new_mesh);
@@ -340,7 +344,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     free(new_verts);
     free(face_points);
     free(edge_points);
-    
+    free(nedges_per_thread);
     
     TracyCFree(edge_pointsv);
     TracyCFree(new_verts);

@@ -33,6 +33,9 @@ ms_file_obj_read_file_new(char *filename)
     struct ms_v3 *vertices = malloc(nverts * sizeof(struct ms_v3));
     int *faces = malloc(nfaces * expected_face_vertices * sizeof(int));
     
+    assert(vertices);
+    assert(faces);
+    
     TracyCAlloc(vertices, nverts * sizeof(struct ms_v3));
     TracyCAlloc(faces, nfaces * expected_face_vertices * sizeof(int));
     
