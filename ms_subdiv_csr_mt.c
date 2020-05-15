@@ -143,6 +143,8 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
     
     TracyCZoneEnd(alloc_unique_edges);
     
+    int blocks_started = 0;
+    
 #pragma omp parallel
     {
         TracyCZoneNS(count_unique_edges_count, "count", true, CALLSTACK_DEPTH);
@@ -150,40 +152,57 @@ init_acceleration_struct_mt(struct ms_mesh mesh)
         int DBG_starts = 0;
         int DBG_ends = 0;
         
-        int tid = omp_get_thread_num();
-        int block_size = mesh.nverts / nthreads;
+        //int tid = omp_get_thread_num();
+        int block_size = mesh.nverts / nthreads / 4;
         
-        int this_tid_process_from = tid * block_size;
-        int this_tid_process_to = this_tid_process_from + block_size;
-        
-        if (tid == nthreads - 1) {
-            this_tid_process_to = mesh.nverts;
+        if (block_size == 0) {
+            block_size = 1;
         }
         
-        for (int face = 0; face < mesh.nfaces; ++face) {
-            for (int vert = 0; vert < mesh.degree; ++vert) {
-                int next = (vert + 1) % mesh.degree;
-                
-                int start_edge_index = face * mesh.degree + vert;
-                int end_edge_index = face * mesh.degree + next;
-                
-                int end = mesh.faces[end_edge_index];
-                int start = mesh.faces[start_edge_index];
-                
-                if (this_tid_process_from <= start && start < this_tid_process_to) {
-                    add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, start, end);
-                    add_face(faces_from, faces_accum, faces, face, start);
+        //int this_tid_process_from = tid * block_size;
+        //int this_tid_process_to = this_tid_process_from + block_size;
+        
+        int block_count = mesh.nverts / block_size;
+        
+        
+        for (;;) {
+            int my_block;
+            
+#pragma omp atomic capture
+            my_block = blocks_started++;
+            
+            if (my_block >= block_count) {
+                break;
+            }
+            
+            TracyCZoneNS(count_unique_edges_count_block, "count block", true, CALLSTACK_DEPTH);
+            for (int face = 0; face < mesh.nfaces; ++face) {
+                for (int vert = 0; vert < mesh.degree; ++vert) {
+                    int next = (vert + 1) % mesh.degree;
                     
-                    ++DBG_starts;
-                }
-                
-                if (this_tid_process_from <= end && end < this_tid_process_to) {
-                    add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, end, start);
-                    add_face(faces_from, faces_accum, faces, face, end);
+                    int start_edge_index = face * mesh.degree + vert;
+                    int end_edge_index = face * mesh.degree + next;
                     
-                    ++DBG_ends;
+                    int end = mesh.faces[end_edge_index];
+                    int start = mesh.faces[start_edge_index];
+                    
+                    if (my_block * block_size <= start && start < (my_block + 1) * block_size) {
+                        add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, start, end);
+                        add_face(faces_from, faces_accum, faces, face, start);
+                        
+                        ++DBG_starts;
+                    }
+                    
+                    if (my_block * block_size <= end && end < (my_block + 1) * block_size) {
+                        add_edge(edges_from, edges_accum, edges, edge_indices, start_edge_index, end, start);
+                        add_face(faces_from, faces_accum, faces, face, end);
+                        
+                        ++DBG_ends;
+                    }
                 }
             }
+            
+            TracyCZoneEnd(count_unique_edges_count_block);
         }
         
         char buf[256] = { 0 };
