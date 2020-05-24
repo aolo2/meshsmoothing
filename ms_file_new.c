@@ -113,8 +113,11 @@ ms_file_obj_read_file_new(char *filename)
         }
     }
     
-    struct ms_v3 *vertices = malloc(nverts * sizeof(struct ms_v3));
-    int *faces = malloc(nfaces * expected_face_vertices * sizeof(int));
+    struct ms_v3 *vertices = NULL;
+    int *faces = NULL;
+    
+    posix_memalign((void **) &faces, 64, nfaces * expected_face_vertices * sizeof(int));
+    posix_memalign((void **) &vertices, 64, nverts * sizeof(struct ms_v3));
     
     assert(vertices);
     assert(faces);

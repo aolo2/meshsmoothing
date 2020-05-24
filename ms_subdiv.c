@@ -7,10 +7,12 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     struct ms_accel accel = init_acceleration_struct(mesh);
     
     /* Face points */
-    struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
+    struct ms_v3 *face_points = NULL;
+    posix_memalign((void **) &face_points, 64, mesh.nfaces * sizeof(struct ms_v3));
+    assert(face_points);
+    
     f32 one_over_mesh_degree = 1.0f / mesh.degree;
     
-    assert(face_points);
     
     TracyCAlloc(face_points, mesh.nfaces * sizeof(struct ms_v3));
     
@@ -38,10 +40,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     /* Edge points */
     TracyCZoneN(alloc_edge_points, "allocate", true);
-    int *edge_points = malloc(mesh.nfaces * mesh.degree * sizeof(int));
+    int *edge_points = NULL;
     int nedge_pointsv = 0;
     int nedges = accel.verts_starts[mesh.nverts];
-    struct ms_v3 *edge_pointsv = malloc(nedges * 2 * sizeof(struct ms_v3));
+    struct ms_v3 *edge_pointsv = NULL;
+    
+    posix_memalign((void **) &edge_points, 64, mesh.nfaces * mesh.degree * sizeof(int));
+    posix_memalign((void **) &edge_pointsv, 64, nedges * 2 * sizeof(struct ms_v3));
     
     assert(edge_points);
     assert(edge_pointsv);
@@ -98,7 +103,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
-    struct ms_v3 *new_verts = malloc(mesh.nverts * sizeof(struct ms_v3));
+    struct ms_v3 *new_verts = NULL;
+    posix_memalign((void **) &new_verts, 64, mesh.nverts * sizeof(struct ms_v3));
     assert(new_verts);
     
     TracyCAlloc(new_verts, mesh.nverts * sizeof(struct ms_v3));
@@ -204,10 +210,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     /* Updated vertices + edge points + 1 face point per face */
     new_mesh.nverts = mesh.nverts + nedge_pointsv + mesh.nfaces;
-    new_mesh.vertices = malloc(new_mesh.nverts * sizeof(struct ms_v3));
+    new_mesh.vertices = NULL;
     
-    new_mesh.faces = malloc(new_mesh.nfaces * 4 * sizeof(int));
+    new_mesh.faces = NULL;
     new_mesh.degree = 4;
+    
+    posix_memalign((void **) &new_mesh.vertices, 64, new_mesh.nverts * sizeof(struct ms_v3));
+    posix_memalign((void **) &new_mesh.faces, 64, new_mesh.nfaces * 4 * sizeof(int));
     
     assert(new_mesh.vertices);
     assert(new_mesh.faces);

@@ -49,8 +49,8 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneN(alloc_initial_offsets, "alloc offset arrays", true);
     
     struct ms_v4i *offsets = NULL;
-    
     posix_memalign((void **) &offsets, 64, (mesh.nverts + 1) * sizeof(struct ms_v4i));
+    
     assert(offsets);
     
     memset(offsets, 0x00, (mesh.nverts + 1) * sizeof(struct ms_v4i));
@@ -103,16 +103,24 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     TracyCZoneN(alloc_unique_edges, "alloc", true);
     
-    int *edges = malloc(nedges * sizeof(int));
-    int *faces = malloc(nfaces * sizeof(int));
+    int *edges = NULL;
+    int *faces = NULL;
     
-    int *edge_indices = malloc(2 * nedges * sizeof(int));
-    int *edge_indices_accum = calloc(1, mesh.nverts * sizeof(int));
+    int *edge_indices = NULL;
+    int *edge_indices_accum = NULL;
+    
+    posix_memalign((void **) &edges, 64, nedges * sizeof(int));
+    posix_memalign((void **) &faces, 64, nfaces * sizeof(int));
+    
+    posix_memalign((void **) &edge_indices, 64, 2 * nedges * sizeof(int));
+    posix_memalign((void **) &edge_indices_accum, 64, mesh.nverts * sizeof(int));
     
     assert(edges);
     assert(faces);
     assert(edge_indices_accum);
     assert(edge_indices);
+    
+    memset(edge_indices_accum, 0x00, mesh.nverts * sizeof(int));
     
     TracyCAlloc(edges, nedges * sizeof(int));
     TracyCAlloc(faces, nedges * sizeof(int));
