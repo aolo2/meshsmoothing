@@ -85,9 +85,12 @@ init_acceleration_struct2(struct ms_mesh mesh)
             int start = mesh.faces[start_edge_index];
             int end = mesh.faces[end_edge_index];
             
+            struct ms_v4i *offsets_start = offsets + start;
+            struct ms_v4i *offsets_end = offsets + end;
+            
             /* edge start */
-            int edge_base = offsets[start].a;
-            int edge_count = offsets[start].b;
+            int edge_base = offsets_start->a;
+            int edge_count = offsets_start->b;
             
             int found = -1;
             for (int e = edge_base; e < edge_base + edge_count; ++e) {
@@ -99,16 +102,34 @@ init_acceleration_struct2(struct ms_mesh mesh)
             
             if (found == -1) {
                 edges[edge_base + edge_count] = end;
-                offsets[start].a += 1;
+                offsets_start->b += 1;
                 edge_indices[(edge_base + edge_count) * 2 + 0] = start_edge_index;
                 edge_indices[(edge_base + edge_count) * 2 + 1] = start_edge_index;
             } else {
                 edge_indices[found * 2 + 1] = start_edge_index;
             }
             
+            /* start face */
+            int face_base = offsets_start->a;
+            int face_count = offsets_start->d;
+            
+            found = 0;
+            for (int f = face_base; f < face_base + face_count; ++f) {
+                if (faces[f] == face) {
+                    found = 1;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                faces[face_base + face_count] = face;
+                offsets_start->d += 1;
+            }
+            
+            
             /* edge end */
-            edge_base = offsets[end].a;
-            edge_count = offsets[end].b;
+            edge_base = offsets_end->a;
+            edge_count = offsets_end->b;
             
             found = -1;
             for (int e = edge_base; e < edge_base + edge_count; ++e) {
@@ -120,34 +141,16 @@ init_acceleration_struct2(struct ms_mesh mesh)
             
             if (found == -1) {
                 edges[edge_base + edge_count] = start;
-                offsets[end].b += 1;
+                offsets_end->b += 1;
                 edge_indices[(edge_base + edge_count) * 2 + 0] = start_edge_index;
                 edge_indices[(edge_base + edge_count) * 2 + 1] = start_edge_index;
             } else {
                 edge_indices[found * 2 + 1] = start_edge_index;
             }
             
-            
-            /* start face */
-            int face_base = offsets[start].a;
-            int face_count = offsets[start].d;
-            
-            found = 0;
-            for (int f = face_base; f < face_base + face_count; ++f) {
-                if (faces[f] == face) {
-                    found = 1;
-                    break;
-                }
-            }
-            
-            if (!found) {
-                faces[face_base + face_count] = face;
-                offsets[start].d += 1;
-            }
-            
             /* end face */
-            face_base = offsets[end].a;
-            face_count = offsets[end].d;
+            face_base = offsets_end->a;
+            face_count = offsets_end->d;
             
             found = 0;
             for (int f = face_base; f < face_base + face_count; ++f) {
@@ -159,7 +162,7 @@ init_acceleration_struct2(struct ms_mesh mesh)
             
             if (!found) {
                 faces[face_base + face_count] = face;
-                offsets[end].d += 1;
+                offsets_end->d += 1;
             }
         }
     }

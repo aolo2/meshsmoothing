@@ -1,3 +1,86 @@
+#if 0
+static u64
+ms_file_size(FILE *file)
+{
+    assert(file);
+    
+    u64 state = ftell(file);
+    fseek(file, 0, SEEK_END);
+    u64 result = ftell(file);
+    fseek(file, state, SEEK_SET);
+    return(result);
+}
+
+static void *
+ms_file_read(FILE *file, u64 size)
+{
+    assert(file);
+    
+    void *buffer = malloc(size);
+    assert(buffer);
+    fread(buffer, size, 1, file);
+    return(buffer);
+}
+
+static struct ms_mesh
+ms_file_obj_read_fast(char *filename)
+{
+    TracyCZone(__FUNC__, true);
+    
+    printf("[INFO] Loading OBJ file: %s...\n", filename);
+    
+    FILE *file = fopen(filename, "rb");
+    
+    u64 size = ms_file_size(file);
+    char *buffer = ms_file_read(file, size);
+    
+    int nverts = 0;
+    int nfaces = 0;
+    
+    for (u64 i = 0; i < size - 2; ++i) {
+        if (buffer[i] == '\n' && buffer[i + 2] == ' ') {
+            if (buffer[i + 1] == 'v') {
+                ++nverts;
+            } else if (buffer[i + 1] == 'f') {
+                ++nfaces;
+            }
+        }
+    }
+    
+    struct ms_v3 *verts = malloc(nverts * sizeof(struct ms_v3));
+    int *faces = malloc(nfaces * 4 * sizeof(int));
+    
+    assert(verts);
+    assert(faces);
+    
+    bool nl = true;
+    for (u64 i = 0; i < size; ++i) {
+        if (nl) {
+            if (buffer[i] == 'v') {
+                struct ms_v3 vertex;
+                // TODO: parse floats
+            } else if (buffer[i] == 'f') {
+                int a, b, c,
+                // TODO: parse ints
+            }
+        }
+        
+        if (buffer[i] == '\n') {
+            nl = true;
+        }
+    }
+    
+    free(buffer);
+    fclose(file);
+    
+    struct ms_mesh mesh = { 0 };
+    
+    TracyCZoneEnd(__FUNC__);
+    
+    return(mesh);
+}
+#endif
+
 static struct ms_mesh
 ms_file_obj_read_file_new(char *filename)
 {

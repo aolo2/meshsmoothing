@@ -4,7 +4,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZone(__FUNC__, true);
     
     /* Construct acceleration structure */
-    struct ms_accel accel = init_acceleration_struct(mesh);
+    struct ms_accel accel = init_acceleration_struct2(mesh);
     
     /* Face points */
     struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
@@ -242,6 +242,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         int b = mesh.faces[face * mesh.degree + 1];
         int c = mesh.faces[face * mesh.degree + 2];
         int d = mesh.faces[face * mesh.degree + 3];
+        
+        int any = edge_point_ab | edge_point_bc | edge_point_cd | edge_point_da | a | b | c | d;
+        if (any < 0) {
+            __builtin_trap();
+        }
         
         /* Add face point */
         new_mesh.vertices[facep_index] = face_point_abcd;
