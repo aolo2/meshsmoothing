@@ -64,27 +64,27 @@ init_acceleration_struct(struct ms_mesh mesh)
     int nedges = mesh.nfaces * mesh.degree * 2;
     int nfaces = mesh.nfaces * mesh.degree * 2;
     
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        int start = mesh.faces[face * mesh.degree + 0];
-        int end = mesh.faces[face * mesh.degree + 1];
+    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
+        int start = mesh.faces[face + 0];
+        int end = mesh.faces[face + 1];
         
         offsets[start + 1].a += 1;
         offsets[end + 1].a += 1;
         
         start = end;
-        end = mesh.faces[face * mesh.degree + 2];
+        end = mesh.faces[face + 2];
         
         offsets[start + 1].a += 1;
         offsets[end + 1].a += 1;
         
         start = end;
-        end = mesh.faces[face * mesh.degree + 3];
+        end = mesh.faces[face + 3];
         
         offsets[start + 1].a += 1;
         offsets[end + 1].a += 1;
         
         start = end;
-        end = mesh.faces[face * mesh.degree + 0];
+        end = mesh.faces[face + 0];
         
         offsets[start + 1].a += 1;
         offsets[end + 1].a += 1;
@@ -126,68 +126,44 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     TracyCZoneN(count_unique_edges_count, "count", true);
     
-#if 0
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        for (int vert = 0; vert < mesh.degree; ++vert) {
-            int next = (vert + 1) & 0x3;
-            
-            int start_edge_index = face * mesh.degree + vert;
-            int end_edge_index = face * mesh.degree + next;
-            
-            int start = mesh.faces[start_edge_index];
-            int end = mesh.faces[end_edge_index];
-            
-            add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                              end, face, start_edge_index);
-            
-            add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                              start, face, start_edge_index);
-        }
+    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
+        int start = mesh.faces[face + 0];
+        int end = mesh.faces[face + 1];
+        int actual_face = face >> 2;
+        
+        add_edge_and_face(offsets + start, edges, faces, edge_indices,
+                          end, actual_face, face);
+        
+        add_edge_and_face(offsets + end, edges, faces, edge_indices,
+                          start, actual_face, face);
+        
+        start = end;
+        end = mesh.faces[face + 2];
+        
+        add_edge_and_face(offsets + start, edges, faces, edge_indices,
+                          end, actual_face, face + 1);
+        
+        add_edge_and_face(offsets + end, edges, faces, edge_indices,
+                          start, actual_face, face + 1);
+        
+        start = end;
+        end = mesh.faces[face + 3];
+        
+        add_edge_and_face(offsets + start, edges, faces, edge_indices,
+                          end, actual_face, face + 2);
+        
+        add_edge_and_face(offsets + end, edges, faces, edge_indices,
+                          start, actual_face, face + 2);
+        
+        start = end;
+        end = mesh.faces[face + 0];
+        
+        add_edge_and_face(offsets + start, edges, faces, edge_indices,
+                          end, actual_face, face + 3);
+        
+        add_edge_and_face(offsets + end, edges, faces, edge_indices,
+                          start, actual_face, face + 3);
     }
-#else
-    for (int face = 0; face < mesh.nfaces; ++face) {
-        int start = mesh.faces[face * mesh.degree + 0];
-        int end = mesh.faces[face * mesh.degree + 1];
-        int start_edge_index = face * mesh.degree + 0;
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, face, start_edge_index);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, face, start_edge_index);
-        
-        start = end;
-        start_edge_index++;
-        end = mesh.faces[face * mesh.degree + 2];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, face, start_edge_index);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, face, start_edge_index);
-        
-        start = end;
-        start_edge_index++;
-        end = mesh.faces[face * mesh.degree + 3];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, face, start_edge_index);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, face, start_edge_index);
-        
-        start = end;
-        start_edge_index++;
-        end = mesh.faces[face * mesh.degree + 0];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, face, start_edge_index);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, face, start_edge_index);
-    }
-#endif
-    
     
     for (int i = 0; i < mesh.nverts + 1; ++i) {
         offsets[i].c = offsets[i].a;
