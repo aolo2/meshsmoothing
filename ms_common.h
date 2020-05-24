@@ -54,6 +54,13 @@ struct ms_v2i {
     int b;
 };
 
+struct ms_v4i {
+    s32 a;
+    s32 b;
+    s32 c;
+    s32 d;
+};
+
 struct ms_v3 {
     f32 x;
     f32 y;
@@ -74,7 +81,6 @@ struct ms_accel {
     int *verts_starts;
     
     int *edge_indices;
-    int *edge_faces;
     
     int *faces_matrix;
     int *verts_matrix;

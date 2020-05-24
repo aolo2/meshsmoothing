@@ -4,7 +4,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZone(__FUNC__, true);
     
     /* Construct acceleration structure */
-    struct ms_accel accel = init_acceleration_struct_mt(mesh);
+    struct ms_accel accel = init_acceleration_struct(mesh);
     
     /* Face points */
     struct ms_v3 *face_points = malloc(mesh.nfaces * sizeof(struct ms_v3));
