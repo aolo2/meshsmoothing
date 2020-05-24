@@ -63,8 +63,9 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     int nedges = mesh.nfaces * mesh.degree * 2;
     int nfaces = mesh.nfaces * mesh.degree * 2;
+    int nfaces4 = mesh.nfaces * 4;
     
-    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
+    for (int face = 0; face < nfaces4; face += 4) {
         int start = mesh.faces[face + 0];
         int end = mesh.faces[face + 1];
         
@@ -126,7 +127,7 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     TracyCZoneN(count_unique_edges_count, "count", true);
     
-    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
+    for (int face = 0; face < nfaces4; face += 4) {
         int start = mesh.faces[face + 0];
         int end = mesh.faces[face + 1];
         int actual_face = face >> 2;
@@ -211,6 +212,9 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneN(repack_offsets, "repack offset arrays", true);
     int *edges_from = malloc((mesh.nverts + 1) * sizeof(int));
     int *faces_from = malloc((mesh.nverts + 1) * sizeof(int));
+    
+    TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
+    TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
     
     for (int i = 0; i < mesh.nverts + 1; ++i) {
         edges_from[i] = offsets[i].a;
