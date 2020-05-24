@@ -70,7 +70,6 @@ struct ms_v3 {
 struct ms_mesh {
     struct ms_v3 *vertices;
     int *faces;
-    
     int degree;
     int nverts;
     int nfaces;

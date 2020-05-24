@@ -9,28 +9,27 @@ add_edge_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indi
     int face_count = offsets->d;
     int face_base = edge_base;
     
-    int found = -1;
+    bool found = false;
     for (int e = edge_base; e < edge_base + edge_count; ++e) {
         if (edges[e] == end) {
-            found = e;
+            found = true;
+            edge_indices[e * 2 + 1] = edge_index;
             break;
         }
     }
     
-    if (found == -1) {
+    if (!found) {
         edges[edge_base + edge_count] = end;
         offsets->b += 1;
         edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index;
         edge_indices[(edge_base + edge_count) * 2 + 1] = edge_index;
-    } else {
-        edge_indices[found * 2 + 1] = edge_index;
     }
     
     /* face */
-    found = 0;
-    for (int f = face_base; f < face_base + face_count; ++f) {
+    found = false;
+    for (int f = face_base; f < face_base + face_count + 1; ++f) {
         if (faces[f] == face) {
-            found = 1;
+            found = true;
             break;
         }
     }
@@ -328,7 +327,6 @@ free_acceleration_struct(struct ms_accel *accel)
     free(accel->verts_starts);
     
     free(accel->edge_indices);
-    
     free(accel->faces_matrix);
     free(accel->verts_matrix);
     

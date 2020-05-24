@@ -32,7 +32,7 @@ main(int argc, char *argv[])
     char output_filename[512] = { 0 };
     
     bool fortex = false;
-    bool writefile = true;
+    bool writefile = false;
     
     printf("[INFO] Write to file: %s\n       Generate LaTeX: %s\n",
            (writefile ? "ENABLED" : "DISABLED"), (fortex ? "ENABLED" : "DISABLED"));
@@ -52,6 +52,7 @@ main(int argc, char *argv[])
     
     if (bench_itearitons == -1) {
         printf("[INFO] Running in REGULAR mode with %d iterations\n", iterations);
+        u64 usec_before = usec_now();
         for (int i = 0; i < iterations; ++i) {
             int size = mesh.nfaces * 4;
             
@@ -73,7 +74,7 @@ main(int argc, char *argv[])
                 printf("\t(%d, %f)\n", size, total / 1000.0f);
             } else {
                 printf("[INFO] Finished Catmull-Clark [%d]\n", i + 1);
-                printf("[TIME] %d vertices, %lu cycles, %f cycles/v\n", size, total, total / (f32) size);
+                printf("[TIME] New mesh: %d vertices, %lu cycles, %f cycles/v\n", size, total, total / (f32) size);
             }
             
             int len = snprintf(output_filename, 512, "%s_%d.obj", argv[1], i + 1);
@@ -83,11 +84,15 @@ main(int argc, char *argv[])
                 ms_file_obj_write_file_new(output_filename, mesh);
             }
         }
+        
+        u64 usec_after = usec_now();
+        printf("[TIME] Total time elapsed %.f ms\n", (usec_after - usec_before) / 1000.0f);
     } else {
         printf("[INFO] Running in BENCH mode with %d repeats\n", bench_itearitons);
         unsigned long long total_total_cycles = 0ULL;
         f32 iteration_cycles[MAX_BENCH_ITERATIONS];
         
+        u64 usec_before = usec_now();
         for (int i = 0; i < bench_itearitons; ++i) {
             printf("\r[BENCH] %d/%d", i + 1, bench_itearitons);
             fflush(stdout);
@@ -106,6 +111,8 @@ main(int argc, char *argv[])
             total_total_cycles += (f32) (after - before) / (mesh.nfaces * 4);
         }
         
+        u64 usec_after = usec_now();
+        
         printf("\n[BENCH] Done\n");
         
         f32 avg = (f32) total_total_cycles / bench_itearitons;
@@ -123,6 +130,7 @@ main(int argc, char *argv[])
         stdev = sqrtf(stdev);
         
         printf("[TIME] avg: %.1f cycles/v | sigma: %.2f\n", avg, stdev);
+        printf("[TIME] avg: %.1f ms per subdivision of %d vertex mesh\n", (usec_after - usec_before) / 1000.0f / bench_itearitons, mesh.nverts);
     }
     
     if (fortex) {
