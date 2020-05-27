@@ -539,3 +539,12 @@ fail
 
 --- parallel "reduce offsets" and "copy unique points" - small wins
 --- parallel "propogate offsets" and 2 sections in "tight pack" - small wins too
+
+
+
+--- try to use more data from cache lines in IAS: small win (~215->208 c/v for cubic_torus_7 _ 25)
+--- unroll by four: small win (208->200 --//--)
+
+
+
+--- tried same cache reuse in MT, bad results, but accidentally 1T-ed "tight packing"

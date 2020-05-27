@@ -172,15 +172,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             /* Average of mid points of all the edges this vertex is adjacent to */
             struct ms_v3 avg_mid_edge_point = { 0 };
             for (int i = 0; i < adj_verts_count; ++i) {
-                int start = v;
                 int end = accel.verts_matrix[adj_verts_base + i];
                 
-                struct ms_v3 startv = mesh.vertices[start];
                 struct ms_v3 endv = mesh.vertices[end];
                 
-                avg_mid_edge_point.x += (startv.x + endv.x) * 0.5f;
-                avg_mid_edge_point.y += (startv.y + endv.y) * 0.5f;
-                avg_mid_edge_point.z += (startv.z + endv.z) * 0.5f;
+                avg_mid_edge_point.x += (vertex.x + endv.x) * 0.5f;
+                avg_mid_edge_point.y += (vertex.y + endv.y) * 0.5f;
+                avg_mid_edge_point.z += (vertex.z + endv.z) * 0.5f;
             }
             
             f32 norm_coeff = 1.0f / adj_verts_count;
@@ -229,6 +227,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneN(copy_data, "copy unique points", true);
     memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
     memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, nedge_pointsv * sizeof(struct ms_v3));
+    memcpy(new_mesh.vertices + mesh.nverts + nedge_pointsv, face_points, mesh.nfaces * sizeof(struct ms_v3));
     TracyCZoneEnd(copy_data);
     
     int vert_base = mesh.nverts + nedge_pointsv;
