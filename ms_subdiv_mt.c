@@ -13,7 +13,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     assert(face_points);
     
     /* Construct acceleration structure */
-    struct ms_accel accel = init_acceleration_struct_mt(mesh);
+    struct ms_accel accel = init_acceleration_struct_mt(mesh, face_points);
     
     TracyCZoneNS(alloc_everything, "allocate", true, CALLSTACK_DEPTH);
     
@@ -60,32 +60,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCZoneEnd(alloc_everything);
     
-    /* Face points */
-    f32 one_over_mesh_degree = 1.0f / mesh.degree;
+    
     
 #pragma omp parallel
     {
-        TracyCZoneNS(compute_face_points, "face points", true, CALLSTACK_DEPTH);
-        
-#pragma omp for
-        for (int face = 0; face < mesh.nfaces; ++face) {
-            struct ms_v3 fp = { 0 };
-            for (int vert = 0; vert < mesh.degree; ++vert) {
-                struct ms_v3 vertex = mesh.vertices[mesh.faces[face * mesh.degree + vert]];
-                fp.x += vertex.x;
-                fp.y += vertex.y;
-                fp.z += vertex.z;
-            }
-            
-            fp.x *= one_over_mesh_degree;
-            fp.y *= one_over_mesh_degree;
-            fp.z *= one_over_mesh_degree;
-            
-            face_points[face] = fp;
-        }
-        
-        TracyCZoneEnd(compute_face_points);
-        
         /* Edge points */
         TracyCZoneNS(count_ep_work, "count edge point work", true, CALLSTACK_DEPTH);
         int tid = omp_get_thread_num();
@@ -316,6 +294,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             int b = mesh.faces[face + 1];
             int c = mesh.faces[face + 2];
             int d = mesh.faces[face + 3];
+            
+#if 1
+            int any = edge_point_ab | edge_point_bc | edge_point_cd | edge_point_da | a | b | c | d;
+            if (any < 0) {
+                __builtin_trap();
+            }
+#endif
             
             /* Add faces */
             {
