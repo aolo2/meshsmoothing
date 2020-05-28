@@ -548,3 +548,6 @@ fail
 
 
 --- tried same cache reuse in MT, bad results, but accidentally 1T-ed "tight packing"
+
+
+--- IDEA: cache reuse for edge_points unique edge lookup: end index (4) + end v3 (12) + edge_indices (8) + 2 face indices (8) all packed = 16 + 16 = 32. start v3 is already ok

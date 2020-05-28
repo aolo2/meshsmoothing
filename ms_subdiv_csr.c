@@ -41,7 +41,7 @@ add_edge_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indi
 }
 
 static struct ms_accel
-init_acceleration_struct(struct ms_mesh mesh)
+init_acceleration_struct(struct ms_mesh mesh, struct ms_v3 *face_points)
 {
     TracyCZone(__FUNC__, true);
     
@@ -108,16 +108,25 @@ init_acceleration_struct(struct ms_mesh mesh)
     int *edge_indices = NULL;
     int *edge_indices_accum = NULL;
     
+    int *face_counts = NULL;
+    
+    struct ms_v3 *fp_averages = NULL;
+    
     posix_memalign((void **) &edges, 64, nedges * sizeof(int));
     posix_memalign((void **) &faces, 64, nfaces * sizeof(int));
     
     posix_memalign((void **) &edge_indices, 64, 2 * nedges * sizeof(int));
     posix_memalign((void **) &edge_indices_accum, 64, mesh.nverts * sizeof(int));
     
+    posix_memalign((void **) &fp_averages, 64, mesh.nverts * sizeof(struct ms_v3));
+    posix_memalign((void **) &face_counts, 64, mesh.nverts * sizeof(int));
+    
     assert(edges);
     assert(faces);
     assert(edge_indices_accum);
     assert(edge_indices);
+    assert(fp_averages);
+    assert(face_counts);
     
     memset(edge_indices_accum, 0x00, mesh.nverts * sizeof(int));
     
@@ -128,9 +137,6 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCAlloc(edge_indices_accum, mesh.nverts * sizeof(int));
     
     TracyCZoneEnd(alloc_unique_edges);
-    
-    
-    
     
     TracyCZoneN(count_unique_edges_count, "count", true);
     
@@ -180,6 +186,11 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneEnd(count_unique_edges_count);
     TracyCZoneEnd(count_unique_edges);
     
+    struct ms_edge *packed_edges = NULL;
+    posix_memalign((void **) &packed_edges, 64, nedges * sizeof(struct ms_edge));
+    
+    assert(packed_edges);
+    
     TracyCZoneN(tight_pack, "pack unique edges", true);
     /* Tighter! */
     int edges_head = 0;
@@ -188,60 +199,100 @@ init_acceleration_struct(struct ms_mesh mesh)
     for (int v = 0; v < mesh.nverts; ++v) {
         int e_from = offsets[v].a;
         int e_count = offsets[v].b;
-        
-        offsets[v].a = edges_head;
-        
-        for (int i = 0; i < e_count; ++i) {
-            edges[edges_head] = edges[e_from + i];
-            edge_indices[2 * edges_head + 0] = edge_indices[(e_from + i) * 2 + 0];
-            edge_indices[2 * edges_head + 1] = edge_indices[(e_from + i) * 2 + 1];
-            ++edges_head;
-        }
-    }
-    
-    offsets[mesh.nverts].a = edges_head;
-    
-    for (int v = 0; v < mesh.nverts; ++v) {
         int f_from = offsets[v].c;
         int f_count = offsets[v].d;
         
+        struct ms_v3 startv = mesh.vertices[v];
+        
+        struct ms_v3 mid_point = { 0 };
+        struct ms_v3 face_point = { 0 };
+        
+        offsets[v].a = edges_head;
         offsets[v].c = faces_head;
         
-        for (int i = 0; i < f_count; ++i) {
-            faces[faces_head++] = faces[f_from + i];
+        for (int i = 0; i < e_count; ++i) {
+            int end = edges[e_from + i];
+            struct ms_v3 endv = mesh.vertices[end];
+            
+            int edge_index_1 = edge_indices[(e_from + i) * 2 + 0];
+            int edge_index_2 = edge_indices[(e_from + i) * 2 + 1];
+            
+            edges[edges_head] = end;
+            
+            struct ms_edge *edge = packed_edges + edges_head;
+            
+            edge->endv = mesh.vertices[end];
+            edge->edge_index_1 = edge_index_1;
+            edge->edge_index_2 = edge_index_2;
+            edge->end = end;
+            
+            ++edges_head;
+            
+            mid_point.x += (startv.x + endv.x) * 0.5f;
+            mid_point.y += (startv.y + endv.y) * 0.5f;
+            mid_point.z += (startv.z + endv.z) * 0.5f;
         }
+        
+        for (int i = 0; i < f_count; ++i) {
+            int face = faces[f_from + i];
+            
+            faces[faces_head++] = face;
+            
+            face_point.x += face_points[face].x;
+            face_point.y += face_points[face].y;
+            face_point.z += face_points[face].z;
+        }
+        
+        if (f_count > 0) {
+            face_point.x /= f_count;
+            face_point.y /= f_count;
+            face_point.z /= f_count;
+        }
+        
+        if (e_count > 0) {
+            mid_point.x /= e_count; 
+            mid_point.y /= e_count; 
+            mid_point.z /= e_count; 
+        }
+        
+        /* Weights */
+        f32 w1 = (f32) (f_count - 3) / f_count;
+        f32 w2 = 1.0f / f_count;
+        f32 w3 = 2.0f * w2;
+        
+        fp_averages[v].x = w1 * startv.x + w2 * face_point.x + w3 * mid_point.x;
+        fp_averages[v].y = w1 * startv.y + w2 * face_point.y + w3 * mid_point.y;
+        fp_averages[v].z = w1 * startv.z + w2 * face_point.z + w3 * mid_point.z;
+        
+        face_counts[v] = f_count;
     }
     
+    offsets[mesh.nverts].a = edges_head;
     offsets[mesh.nverts].c = faces_head;
     
     TracyCZoneEnd(tight_pack);
     
     TracyCZoneN(repack_offsets, "repack offset arrays", true);
     int *edges_from = malloc((mesh.nverts + 1) * sizeof(int));
-    int *faces_from = malloc((mesh.nverts + 1) * sizeof(int));
     
     TracyCAlloc(edges_from, (mesh.nverts + 1) * sizeof(int));
-    TracyCAlloc(faces_from, (mesh.nverts + 1) * sizeof(int));
     
     for (int i = 0; i < mesh.nverts + 1; ++i) {
         edges_from[i] = offsets[i].a;
-        faces_from[i] = offsets[i].c;
     }
     
     TracyCZoneEnd(repack_offsets);
-    
     
     TracyCZoneN(return_and_free, "free memory", true);
     
     struct ms_accel result = { 0 };
     
     result.verts_starts = edges_from;
-    result.faces_starts = faces_from;
-    
-    result.faces_matrix = faces;
     result.verts_matrix = edges;
+    result.face_counts = face_counts;
     
-    result.edge_indices = edge_indices;
+    result.fp_averages = fp_averages;
+    result.pack = packed_edges;
     
     free(offsets);
     free(edge_indices_accum);
@@ -282,11 +333,11 @@ both_edge_indices(struct ms_accel *accel, int start, int end)
     struct ms_v2i result = { 0 };
     
     for (int e = start_from; e < start_to; ++e) {
-        int some_end = accel->verts_matrix[e];
+        int some_end = accel->pack[e].end;
         
         if (some_end == end) {
-            int index_1 = accel->edge_indices[2 * e + 0];
-            int index_2 = accel->edge_indices[2 * e + 1];
+            int index_1 = accel->pack[e].edge_index_1;
+            int index_2 = accel->pack[e].edge_index_2;
             
             result.a = index_1;
             result.b = index_2;
@@ -310,11 +361,11 @@ edge_adjacent_faces(struct ms_accel *accel, int start, int end)
         int some_end = accel->verts_matrix[e];
         
         if (some_end == end) {
-            int face_1 = accel->edge_indices[2 * e + 0] >> 2;
-            int face_2 = accel->edge_indices[2 * e + 1] >> 2;
+            int index_1 = accel->pack[e].edge_index_1;
+            int index_2 = accel->pack[e].edge_index_2;
             
-            result.a = face_1;
-            result.b = face_2;
+            result.a = index_1 >> 2;
+            result.b = index_2 >> 2;
             
             break;
         }
@@ -326,17 +377,9 @@ edge_adjacent_faces(struct ms_accel *accel, int start, int end)
 static void
 free_acceleration_struct(struct ms_accel *accel)
 {
-    free(accel->faces_starts);
     free(accel->verts_starts);
-    
-    free(accel->edge_indices);
-    free(accel->faces_matrix);
     free(accel->verts_matrix);
     
-    TracyCFree(accel->faces_starts);
     TracyCFree(accel->verts_starts);
-    
-    TracyCFree(accel->edge_indices);
-    TracyCFree(accel->faces_matrix);
     TracyCFree(accel->verts_matrix);
 }

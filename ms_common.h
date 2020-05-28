@@ -18,7 +18,6 @@
 #        undef TracyCAllocS
 #        define TracyCZoneS(a, b, c) TracyCZone(a, b)
 #        define TracyCZoneNS(a, b, c, d) TracyCZoneN(a, b, c)
-#        define TracyCAllocS(a, b, c) TracyCAlloc(a, b)
 #    endif
 #else
 #    define TracyCZone(...)
@@ -80,12 +79,24 @@ struct ms_mesh {
     int nfaces;
 };
 
+/* 20 bytes */
+struct ms_edge {
+    struct ms_v3 endv;
+    int edge_index_1;
+    int edge_index_2;
+    int end;
+};
+
+struct ms_average {
+    u32 face_count;
+    struct ms_v3 point;
+};
+
 struct ms_accel {
-    int *faces_starts;
     int *verts_starts;
-    
-    int *edge_indices;
-    
-    int *faces_matrix;
     int *verts_matrix;
+    int *face_counts;
+    
+    struct ms_edge *pack;
+    struct ms_v3 *fp_averages;
 };

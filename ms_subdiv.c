@@ -3,8 +3,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    /* Construct acceleration structure */
-    struct ms_accel accel = init_acceleration_struct(mesh);
+    TracyCZoneN(compute_face_points, "face points", true);
     
     /* Face points */
     struct ms_v3 *face_points = NULL;
@@ -15,9 +14,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     
     TracyCAlloc(face_points, mesh.nfaces * sizeof(struct ms_v3));
-    
-    TracyCZoneN(compute_face_points, "face points", true);
-    
     
     for (int face = 0; face < mesh.nfaces; ++face) {
         struct ms_v3 fp = { 0 };
@@ -37,6 +33,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     
     TracyCZoneEnd(compute_face_points);
+    
+    /* Construct acceleration structure */
+    struct ms_accel accel = init_acceleration_struct(mesh, face_points);
     
     /* Edge points */
     TracyCZoneN(alloc_edge_points, "allocate", true);
@@ -59,19 +58,17 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(alloc_edge_points);
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
+    
     for (int start = 0; start < mesh.nverts; ++start) {
         int from = accel.verts_starts[start];
         int to = accel.verts_starts[start + 1];
+        struct ms_v3 startv = mesh.vertices[start];
         
         for (int e = from; e < to; ++e) {
-            int end = accel.verts_matrix[e];
-            
-            /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
-            int edge_index_1 = accel.edge_indices[2 * e + 0];
-            int edge_index_2 = accel.edge_indices[2 * e + 1];
-            
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[end];
+            struct ms_edge *edge = accel.pack + e;
+            struct ms_v3 endv = edge->endv;
+            int edge_index_1 = edge->edge_index_1;
+            int edge_index_2 = edge->edge_index_2;
             
             int face = edge_index_1 >> 2;
             int adj  = edge_index_2 >> 2;
@@ -103,24 +100,13 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(compute_edge_points);
     
     /* Update points */
-    struct ms_v3 *new_verts = NULL;
-    posix_memalign((void **) &new_verts, 64, mesh.nverts * sizeof(struct ms_v3));
-    assert(new_verts);
-    
-    TracyCAlloc(new_verts, mesh.nverts * sizeof(struct ms_v3));
-    
     TracyCZoneN(update_positions, "update old points", true);
+    struct ms_v3 *new_verts = accel.fp_averages;
+    
     for (int v = 0; v < mesh.nverts; ++v) {
-        struct ms_v3 vertex = mesh.vertices[v];
-        struct ms_v3 new_vert;
-        
         int adj_verts_base = accel.verts_starts[v];
-        int adj_faces_base = accel.faces_starts[v];
-        
         int adj_verts_count = accel.verts_starts[v + 1] - adj_verts_base;
-        int adj_faces_count = accel.faces_starts[v + 1] - adj_faces_base;
-        
-        f32 one_over_adj_faces_count = 1.0f / adj_faces_count;
+        int adj_faces_count = accel.face_counts[v];
         
         if (adj_faces_count != adj_verts_count) {
             /* This vertex is on an edge of a hole */
@@ -148,56 +134,16 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
             
             f32 one_over_adj_to_hole = 1.0f / (nedges_adj_to_hole + 1);
+            struct ms_v3 vertex = mesh.vertices[v];
             
             avg_mid_edge_point.x *= 0.5f;
             avg_mid_edge_point.y *= 0.5f;
             avg_mid_edge_point.z *= 0.5f;
             
-            new_vert.x = (avg_mid_edge_point.x + vertex.x) * one_over_adj_to_hole;
-            new_vert.y = (avg_mid_edge_point.y + vertex.y) * one_over_adj_to_hole;
-            new_vert.z = (avg_mid_edge_point.z + vertex.z) * one_over_adj_to_hole;
-        } else {
-            /* Average of face points of all the faces this vertex is adjacent to */
-            struct ms_v3 avg_face_point = { 0 };
-            for (int i = 0; i < adj_faces_count; ++i) {
-                struct ms_v3 fp = face_points[accel.faces_matrix[adj_faces_base + i]];
-                avg_face_point.x += fp.x;
-                avg_face_point.y += fp.y;
-                avg_face_point.z += fp.z;
-            }
-            avg_face_point.x *= one_over_adj_faces_count;
-            avg_face_point.y *= one_over_adj_faces_count;
-            avg_face_point.z *= one_over_adj_faces_count;
-            
-            /* Average of mid points of all the edges this vertex is adjacent to */
-            struct ms_v3 avg_mid_edge_point = { 0 };
-            for (int i = 0; i < adj_verts_count; ++i) {
-                int end = accel.verts_matrix[adj_verts_base + i];
-                
-                struct ms_v3 endv = mesh.vertices[end];
-                
-                avg_mid_edge_point.x += (vertex.x + endv.x) * 0.5f;
-                avg_mid_edge_point.y += (vertex.y + endv.y) * 0.5f;
-                avg_mid_edge_point.z += (vertex.z + endv.z) * 0.5f;
-            }
-            
-            f32 norm_coeff = 1.0f / adj_verts_count;
-            avg_mid_edge_point.x *= norm_coeff;
-            avg_mid_edge_point.y *= norm_coeff;
-            avg_mid_edge_point.z *= norm_coeff;
-            
-            /* Weights */
-            f32 w1 = (f32) (adj_faces_count - 3) * one_over_adj_faces_count;
-            f32 w2 = one_over_adj_faces_count;
-            f32 w3 = 2.0f * w2;
-            
-            /* Weighted average to obtain a new vertex */
-            new_vert.x = w1 * vertex.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
-            new_vert.y = w1 * vertex.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
-            new_vert.z = w1 * vertex.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
+            new_verts[v].x = (avg_mid_edge_point.x + vertex.x) * one_over_adj_to_hole;
+            new_verts[v].y = (avg_mid_edge_point.y + vertex.y) * one_over_adj_to_hole;
+            new_verts[v].z = (avg_mid_edge_point.z + vertex.z) * one_over_adj_to_hole;
         }
-        
-        new_verts[v] = new_vert;
     }
     TracyCZoneEnd(update_positions);
     
