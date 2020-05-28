@@ -58,11 +58,10 @@ struct ms_v2i {
     int b;
 };
 
-struct ms_v4i {
+struct ms_v3i {
     s32 a;
     s32 b;
     s32 c;
-    s32 d;
 };
 
 struct ms_v3 {
@@ -79,9 +78,11 @@ struct ms_mesh {
     int nfaces;
 };
 
-/* 20 bytes */
+/* 40 bytes */
 struct ms_edge {
     struct ms_v3 endv;
+    struct ms_v3 face_point_1;
+    struct ms_v3 face_point_2;
     int edge_index_1;
     int edge_index_2;
     int end;
