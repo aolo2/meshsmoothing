@@ -139,7 +139,9 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 }
                 
                 edge_points[edge_index_1] = edge_pointsv_offset;
-                edge_points[edge_index_2] = edge_pointsv_offset; /* REMINDER: edge_index_2 might be equal to edge_index_1 if the edge is unique */
+                if (edge_index_1 != edge_index_2) {
+                    edge_points[edge_index_2] = edge_pointsv_offset; /* REMINDER: edge_index_2 might be equal to edge_index_1 if the edge is unique */
+                }
                 
                 edge_pointsv[edge_pointsv_offset] = edge_point;
                 

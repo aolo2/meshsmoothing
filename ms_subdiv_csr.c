@@ -244,7 +244,10 @@ init_acceleration_struct(struct ms_mesh mesh)
     result.edge_indices = edge_indices;
     
     free(offsets);
+    free(edge_indices_accum);
+    
     TracyCFree(offsets);
+    TracyCFree(edge_indices_accum);
     
     TracyCZoneEnd(return_and_free);
     
@@ -334,7 +337,6 @@ free_acceleration_struct(struct ms_accel *accel)
     TracyCFree(accel->verts_starts);
     
     TracyCFree(accel->edge_indices);
-    
     TracyCFree(accel->faces_matrix);
     TracyCFree(accel->verts_matrix);
 }

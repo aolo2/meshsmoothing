@@ -49,6 +49,11 @@ typedef uint8_t  u8;
 typedef float  f32;
 typedef double f64;
 
+struct ms_buffer {
+    void *data;
+    u64 size;
+};
+
 struct ms_v2i {
     int a;
     int b;

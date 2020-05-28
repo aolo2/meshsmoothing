@@ -188,7 +188,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh, struct ms_v3 *face_points)
         
         f32 one_over_mesh_degree = 1.0f / mesh.degree;
         
-#pragma omp for schedule(guided) // barrier!
+#pragma omp for schedule(guided) // barrier! sections below must happen after ^count^ has finished
         for (int f = 0; f < mesh.nfaces * 4; f += 4) {
             
             struct ms_v3 v1 = mesh.vertices[mesh.faces[f + 0]];

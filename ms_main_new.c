@@ -1,21 +1,17 @@
 #include "ms_common.h"
 
-#include "ms_time.c"
-#include "ms_file_new.c"
+#include "ms_system.c"
 
 #ifdef MT
-
-#ifndef NTHREADS
-#define NTHREADS 6
-#endif
-
-#include <omp.h>
-#include "ms_subdiv_csr_mt.c"
-#include "ms_subdiv_mt.c"
-
+#    ifndef NTHREADS
+#        define NTHREADS 6
+#    endif
+#    include <omp.h>
+#    include "ms_subdiv_csr_mt.c"
+#    include "ms_subdiv_mt.c"
 #else
-#include "ms_subdiv_csr.c"
-#include "ms_subdiv.c"
+#    include "ms_subdiv_csr.c"
+#    include "ms_subdiv.c"
 #endif
 
 int
@@ -26,7 +22,7 @@ main(int argc, char *argv[])
         return(1);
     }
     
-    struct ms_mesh mesh = ms_file_obj_read_file_new(argv[1]);
+    struct ms_mesh mesh = ms_file_obj_read_fast(argv[1]);
     int iterations = atoi(argv[2]);
     int bench_itearitons = -1;
     char output_filename[512] = { 0 };
@@ -81,7 +77,7 @@ main(int argc, char *argv[])
             output_filename[len] = 0;
             
             if (writefile) {
-                ms_file_obj_write_file_new(output_filename, mesh);
+                ms_file_obj_write_file(output_filename, mesh);
             }
         }
         
