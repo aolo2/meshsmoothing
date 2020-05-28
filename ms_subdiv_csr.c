@@ -1,6 +1,6 @@
 static inline void
-add_edge_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indices,
-                  int end, int face, int edge_index)
+add_edges_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indices,
+                   int end_1, int end_2, int face, int edge_index_1, int edge_index_2)
 {
     /* edge */
     int edge_base = offsets->a;
@@ -9,24 +9,40 @@ add_edge_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indi
     int face_count = offsets->d;
     int face_base = edge_base;
     
-    bool found = false;
+    int found_1 = -1;
+    int found_2 = -1;
+    
     for (int e = edge_base; e < edge_base + edge_count; ++e) {
-        if (edges[e] == end) {
-            found = true;
-            edge_indices[e * 2 + 1] = edge_index;
-            break;
+        if (edges[e] == end_1) {
+            found_1 = e;
+        } else if (edges[e] == end_2) {
+            found_2 = e;
         }
+        
+        //if (found_1 != -1 && found_2 != -1) { break; }
     }
     
-    if (!found) {
-        edges[edge_base + edge_count] = end;
+    if (found_1 == -1) {
         offsets->b += 1;
-        edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index;
-        edge_indices[(edge_base + edge_count) * 2 + 1] = edge_index;
+        edges[edge_base + edge_count] = end_1;
+        edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index_1;
+        edge_indices[(edge_base + edge_count) * 2 + 1] = edge_index_1;
+        ++edge_count;
+    } else {
+        edge_indices[found_1 * 2 + 1] = edge_index_1;
+    }
+    
+    if (found_2 == -1) {
+        offsets->b += 1;
+        edges[edge_base + edge_count] = end_2;
+        edge_indices[(edge_base + edge_count) * 2 + 0] = edge_index_2;
+        edge_indices[(edge_base + edge_count) * 2 + 1] = edge_index_2;
+    } else {
+        edge_indices[found_2 * 2 + 1] = edge_index_2;
     }
     
     /* face */
-    found = false;
+    bool found = false;
     for (int f = face_base; f < face_base + face_count + 1; ++f) {
         if (faces[f] == face) {
             found = true;
@@ -135,42 +151,26 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneN(count_unique_edges_count, "count", true);
     
     for (int face = 0; face < nfaces4; face += 4) {
-        int start = mesh.faces[face + 0];
-        int end = mesh.faces[face + 1];
+        int v1 = mesh.faces[face + 0];
+        int v2 = mesh.faces[face + 1];
+        int v3 = mesh.faces[face + 2];
+        int v4 = mesh.faces[face + 3];
         int actual_face = face >> 2;
         
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, actual_face, face);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, actual_face, face);
-        
-        start = end;
-        end = mesh.faces[face + 2];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, actual_face, face + 1);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, actual_face, face + 1);
-        
-        start = end;
-        end = mesh.faces[face + 3];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, actual_face, face + 2);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, actual_face, face + 2);
-        
-        start = end;
-        end = mesh.faces[face + 0];
-        
-        add_edge_and_face(offsets + start, edges, faces, edge_indices,
-                          end, actual_face, face + 3);
-        
-        add_edge_and_face(offsets + end, edges, faces, edge_indices,
-                          start, actual_face, face + 3);
+        /*
+
+v1 ----- v2 
+           |    0    | 
+         |3        | 
+         |        1| 
+         |    2    | 
+         v4 ----- v3
+
+*/
+        add_edges_and_face(offsets + v1, edges, faces, edge_indices, v2, v4, actual_face, face + 0, face + 3);
+        add_edges_and_face(offsets + v2, edges, faces, edge_indices, v3, v1, actual_face, face + 1, face + 0);
+        add_edges_and_face(offsets + v3, edges, faces, edge_indices, v4, v2, actual_face, face + 2, face + 1);
+        add_edges_and_face(offsets + v4, edges, faces, edge_indices, v1, v3, actual_face, face + 3, face + 2);
     }
     
     for (int i = 0; i < mesh.nverts + 1; ++i) {

@@ -548,3 +548,7 @@ fail
 
 
 --- tried same cache reuse in MT, bad results, but accidentally 1T-ed "tight packing"
+
+
+--- see branch 'early-compute' for some interesting stuff
+--- adapted two-at-a-time edge adds, small win (205->197)
