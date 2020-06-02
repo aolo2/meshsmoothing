@@ -552,3 +552,17 @@ fail
 
 --- see branch 'early-compute' for some interesting stuff
 --- adapted two-at-a-time edge adds, small win (205->197)
+
+
+
+--- DUUUH!!! 
+if (edge_points[edge_index_1] != -1) {
+	continue;
+}
+
+!! 183.4 cycles/v !!
+
+
+
+
+

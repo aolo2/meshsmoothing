@@ -146,8 +146,6 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneEnd(alloc_unique_edges);
     
     
-    
-    
     TracyCZoneN(count_unique_edges_count, "count", true);
     
     for (int face = 0; face < nfaces4; face += 4) {

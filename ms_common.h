@@ -83,9 +83,7 @@ struct ms_mesh {
 struct ms_accel {
     int *faces_starts;
     int *verts_starts;
-    
-    int *edge_indices;
-    
     int *faces_matrix;
     int *verts_matrix;
+    int *edge_indices;
 };

@@ -51,7 +51,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     assert(edge_points);
     assert(edge_pointsv);
     
-    memset(edge_points, -1, mesh.nfaces * mesh.degree);
+    memset(edge_points, -1, mesh.nfaces * mesh.degree * sizeof(int));
     
     TracyCAlloc(edge_points, mesh.nfaces * mesh.degree * sizeof(struct ms_v3));
     TracyCAlloc(edge_pointsv, nedges * 2 * sizeof(struct ms_v3));
@@ -69,6 +69,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
             int edge_index_1 = accel.edge_indices[2 * e + 0];
             int edge_index_2 = accel.edge_indices[2 * e + 1];
+            
+            if (edge_points[edge_index_1] != -1) {
+                continue;
+            }
             
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[end];

@@ -1,4 +1,4 @@
-static inline void
+static void
 add_edges_and_face(struct ms_v4i *offsets, int *edges, int *faces, int *edge_indices,
                    int end_1, int end_2, int face, int edge_index_1, int edge_index_2)
 {
@@ -98,7 +98,7 @@ init_acceleration_struct_mt(struct ms_mesh mesh, struct ms_v3 *face_points)
         edges_from_locals[tid] = calloc(1, (mesh.nverts + 1) * sizeof(int));
         TracyCAllocS(edges_from_locals[tid], (mesh.nverts + 1) * sizeof(int), CALLSTACK_DEPTH);
         
-#pragma omp for
+#pragma omp for nowait
         for (int face = 0; face < mesh.nfaces; ++face) {
             for (int vert = 0; vert < mesh.degree; ++vert) {
                 int next = (vert + 1) % mesh.degree;

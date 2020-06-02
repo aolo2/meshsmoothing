@@ -98,6 +98,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             }
             
             nedge_pointsv = nedges_per_thread[nthreads];
+            
+            //memset(edge_points, -1, mesh.nfaces * mesh.degree * sizeof(int));
         }
         
         
@@ -118,6 +120,11 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
                 /* edge_index_2 might be equal to edge_index_1 if the edge is unique */
                 int edge_index_1 = accel.edge_indices[2 * e + 0];
                 int edge_index_2 = accel.edge_indices[2 * e + 1];
+                
+                // POSSIBLE RACE CONDITION???? Investigate
+                //if (edge_points[edge_index_1] != -1) {
+                //continue;
+                //}
                 
                 int face = edge_index_1 >> 2;
                 int adj  = edge_index_2 >> 2;
@@ -253,7 +260,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         TracyCZoneEnd(update_positions);
         
         
-#pragma omp single nowait
+#pragma omp single
         {
             TracyCZoneNS(alloc_new_mesh, "allocate new mesh", true, CALLSTACK_DEPTH);
             
@@ -297,7 +304,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             int c = mesh.faces[face + 2];
             int d = mesh.faces[face + 3];
             
-#if 1
+#if 0
             int any = edge_point_ab | edge_point_bc | edge_point_cd | edge_point_da | a | b | c | d;
             if (any < 0) {
                 __builtin_trap();
