@@ -302,7 +302,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     free(face_points);
     free(edge_points);
     
-    
     TracyCFree(edge_pointsv);
     TracyCFree(new_verts);
     TracyCFree(face_points);

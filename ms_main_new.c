@@ -1,5 +1,4 @@
 #include "ms_common.h"
-
 #include "ms_system.c"
 
 #ifdef MT
@@ -132,12 +131,6 @@ main(int argc, char *argv[])
     if (fortex) {
         printf("};\n");
     }
-    
-    free(mesh.vertices);
-    free(mesh.faces);
-    
-    TracyCFree(mesh.vertices);
-    TracyCFree(mesh.faces);
     
     return(0);
 }
