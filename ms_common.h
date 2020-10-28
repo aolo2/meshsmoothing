@@ -20,6 +20,7 @@
 
 #define MAX_BENCH_ITERATIONS 100
 #define SWAP(a, b) { typeof(a) ___tmp___ = (a); (a) = (b); (b) = ___tmp___; }
+#define CACHELINE 64
 
 typedef int64_t s64;
 typedef int32_t s32;
@@ -58,11 +59,13 @@ struct ms_v3 {
 };
 
 struct ms_mesh {
-    struct ms_v3 *vertices;
-    int *faces;
-    int degree;
     int nverts;
     int nfaces;
+    
+    int *faces_from;
+    int *faces;
+    
+    struct ms_v3 *vertices;
 };
 
 struct ms_accel {
@@ -71,4 +74,9 @@ struct ms_accel {
     int *faces_matrix;
     int *verts_matrix;
     int *edge_indices;
+};
+
+
+struct ms_stl {
+    
 };

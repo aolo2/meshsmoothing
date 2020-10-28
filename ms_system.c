@@ -18,6 +18,17 @@ cycles_now(void)
     return((u64) lo) | (((u64) hi) << 32);
 }
 
+static void *
+cacheline_alloc(u64 size)
+{
+    if (size % CACHELINE) {
+        size = ((size + CACHELINE - 1) / CACHELINE) * CACHELINE;
+    }
+    
+    void *result = aligned_alloc(CACHELINE, size);
+    return(result);
+}
+
 static struct ms_buffer
 ms_file_read(char *filename)
 {
@@ -135,103 +146,89 @@ ms_file_obj_read_fast(char *filename)
     TracyCZone(__FUNC__, true);
     
     printf("[INFO] Loading OBJ file: %s...\n", filename);
+    
     struct ms_buffer file = ms_file_read(filename);
     
     u64 size = file.size;
     char *buffer = file.data;
     
-    int nverts = 0;
-    int nfaces = 0;
+    struct ms_v3 *verts = NULL;
+    int *faces = NULL;
+    int *faces_from = NULL;
     
-    for (u64 i = 0; i < size - 2; ++i) {
-        if (i == 0 && buffer[i + 1] == ' ') {
-            if (buffer[i] == 'v') {
-                ++nverts;
-            } else if (buffer[i] == 'f') {
-                ++nfaces;
+    /* TODO(aolo2): prealloc 3 * linecount ? */
+    
+    for (u64 i = 0; i < size - 1; ++i) {
+        if (buffer[i] == 'v' && isspace(buffer[i + 1])) {
+            struct ms_v3 vertex = { 0 };
+            ++i;
+            
+            vertex.x = read_float(buffer, i, size, &i);
+            vertex.y = read_float(buffer, i, size, &i);
+            vertex.z = read_float(buffer, i, size, &i);
+            
+            sb_push(verts, vertex);
+        } else if (buffer[i] == 'f' && isspace(buffer[i + 1])) {
+            ++i;
+            
+            while (buffer[i] != '\n') {
+                int index = read_int(buffer, i, size, &i);
+                
+                sb_push(faces, index);
+                
+                /* Skip other attributes */
+                while (!isspace(buffer[i])) {
+                    ++i;
+                }
             }
-        }
-        
-        if (buffer[i] == '\n' && buffer[i + 2] == ' ') {
-            if (buffer[i + 1] == 'v') {
-                ++nverts;
-            } else if (buffer[i + 1] == 'f') {
-                ++nfaces;
-            }
+            
+            sb_push(faces_from, sb_count(faces));
         }
     }
     
-    struct ms_v3 *verts = malloc(nverts * sizeof(struct ms_v3));
-    int *faces = malloc(nfaces * 4 * sizeof(int));
+    struct ms_mesh mesh = { 0 };
     
-    assert(verts);
-    assert(faces);
+    mesh.vertices = verts;
+    mesh.faces = faces;
+    mesh.faces_from = faces_from;
+    mesh.nverts = sb_count(verts);
+    mesh.nfaces = sb_count(faces_from) - 1;
     
-    u32 verts_read = 0;
-    u32 faces_read = 0;
-    
-    bool nl = true;
-    for (u64 i = 0; i < size - 1; ++i) {
-        if (nl) {
-            if (buffer[i] == 'v' && isspace(buffer[i + 1])) {
-                struct ms_v3 vertex = { 0 };
-                
-                ++i;
-                
-                vertex.x = read_float(buffer, i, size, &i);
-                vertex.y = read_float(buffer, i, size, &i);
-                vertex.z = read_float(buffer, i, size, &i);
-                
-                verts[verts_read++] = vertex;
-            } else if (buffer[i] == 'f' && isspace(buffer[i + 1])) {
-                
-                ++i;
-                
-                int a = read_int(buffer, i, size, &i);
-                while (buffer[i] == '/' || isdigit(buffer[i])) { ++i; }
-                
-                int b = read_int(buffer, i, size, &i);
-                while (buffer[i] == '/' || isdigit(buffer[i])) { ++i; }
-                
-                int c = read_int(buffer, i, size, &i);
-                while (buffer[i] == '/' || isdigit(buffer[i])) { ++i; }
-                
-                int d = read_int(buffer, i, size, &i);
-                
-                /* Negative indices mean addressing from the end */
-                if (a < 0) { a = nverts + a; }
-                if (b < 0) { b = nverts + b; }
-                if (c < 0) { c = nverts + c; }
-                if (d < 0) { d = nverts + d; }
-                
-                /* Indices are 1-based, NOT zero based! */
-                faces[faces_read++] = a - 1;
-                faces[faces_read++] = b - 1;
-                faces[faces_read++] = c - 1;
-                faces[faces_read++] = d - 1;
-            }
-            
-            nl = false;
+    for (int i = 0; i < sb_count(faces); ++i) {
+        /* Negative indices mean addressing from the end */
+        if (mesh.faces[i] < 0) {
+            mesh.faces[i] += mesh.nfaces;
         }
         
-        if (buffer[i] == '\n') {
-            nl = true;
-        }
+        /* Indices are 1-based, NOT zero based! */
+        --mesh.faces[i];
     }
     
     free(buffer);
     
-    struct ms_mesh mesh = { 0 };
-    
-    mesh.degree = 4;
-    mesh.nverts = nverts;
-    mesh.nfaces = nfaces;
-    mesh.vertices = verts;
-    mesh.faces = faces;
-    
     TracyCZoneEnd(__FUNC__);
     
+    printf("[INFO] Loading complete\n");
+    
     return(mesh);
+}
+
+static void
+ms_file_dump_quads(char *filename, struct ms_v3 *vertices)
+{
+    FILE *file = fopen(filename, "wb");
+    assert(file);
+    
+    for (int v = 0; v < sb_count(vertices); ++v) {
+        struct ms_v3 vertex = vertices[v];
+        fprintf(file, "v %f %f %f\n", vertex.x, vertex.y, vertex.z);
+    }
+    
+    for (int f = 0; f < sb_count(vertices); f += 4) {
+        fprintf(file, "f %d %d %d %d\n", f + 1, f + 2, f + 3, f + 4);
+    }
+    
+    fclose(file);
 }
 
 static void

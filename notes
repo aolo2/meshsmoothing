@@ -615,6 +615,20 @@ new_mesh.faces[face_base + 5] = edge_point_bc;
 ALSO THIS MISSES A LOT! But data is not used for a long time. Latency -> Throughput
 edge_points[edge_index_1] = nedge_pointsv;
 edge_points[edge_index_2] = nedge_pointsv;
-
+ 
 
 IDEA: pay for all cache misses once, create a (probably HUGE) linear structure
+
+
+We will need:
+For 1. all vertices (v3) in an array
+For 2. ???
+For 3. Edge start, edge end, face_point_1, face_point_2 (all v3) in an array
+For 4. ???
+For 5. All face_points adjacent to vertex in an array (v3)
+For 6. Edge_start + edge_end (same as 3)
+Fro 7. ...
+
+Before (cubic_torus_7 _ 25)
+[TIME] avg: 187.7 ms per subdivision of 1310688 vertex mesh
+

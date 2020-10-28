@@ -1,4 +1,6 @@
 #include "ms_common.h"
+#include "stb_sb.h"
+
 #include "ms_system.c"
 
 #ifdef MT
@@ -9,8 +11,7 @@
 #    include "ms_subdiv_csr_mt.c"
 #    include "ms_subdiv_mt.c"
 #else
-#    include "ms_subdiv_csr.c"
-#    include "ms_subdiv.c"
+#    include "ms_dhe.c"
 #endif
 
 int
@@ -21,7 +22,13 @@ main(int argc, char *argv[])
         return(1);
     }
     
-    struct ms_mesh mesh = ms_file_obj_read_fast(argv[1]);
+    struct ms_mesh original_mesh = ms_file_obj_read_fast(argv[1]);
+    struct ms_mesh_dhe dhe_mesh = ms_convert_to_dhe(original_mesh);
+    struct ms_v3 *subdivided_mesh = ms_subdivide_new(dhe_mesh);
+    
+    (void) subdivided_mesh;
+    //ms_file_dump_quads("out.obj", subdivided_mesh);
+#if 0
     int iterations = atoi(argv[2]);
     int bench_itearitons = -1;
     char output_filename[512] = { 0 };
@@ -52,14 +59,14 @@ main(int argc, char *argv[])
             int size = mesh.nfaces * 4;
             
             u64 before = cycles_now();
-            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+            struct ms_mesh_dhe new_mesh = ms_subdivide_new(mesh);
             u64 after = cycles_now();
             
-            free(mesh.vertices);
-            free(mesh.faces);
+            //free(mesh.vertices);
+            //free(mesh.faces);
             
-            TracyCFree(mesh.vertices);
-            TracyCFree(mesh.faces);
+            //TracyCFree(mesh.vertices);
+            //TracyCFree(mesh.faces);
             
             mesh = new_mesh;
             
@@ -76,7 +83,7 @@ main(int argc, char *argv[])
             output_filename[len] = 0;
             
             if (writefile) {
-                ms_file_obj_write_file(output_filename, mesh);
+                //ms_file_obj_write_file(output_filename, mesh);
             }
         }
         
@@ -93,14 +100,14 @@ main(int argc, char *argv[])
             fflush(stdout);
             
             u64 before = cycles_now();
-            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+            //struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
             u64 after = cycles_now();
             
-            free(new_mesh.vertices);
-            free(new_mesh.faces);
+            //free(new_mesh.vertices);
+            //free(new_mesh.faces);
             
-            TracyCFree(new_mesh.vertices);
-            TracyCFree(new_mesh.faces);
+            //TracyCFree(new_mesh.vertices);
+            //TracyCFree(new_mesh.faces);
             
             iteration_cycles[i] = (f32) (after - before) / (mesh.nfaces * 4);
             total_total_cycles += (f32) (after - before) / (mesh.nfaces * 4);
@@ -131,6 +138,7 @@ main(int argc, char *argv[])
     if (fortex) {
         printf("};\n");
     }
+#endif
     
     return(0);
 }
