@@ -22,22 +22,21 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(compute_face_points);
     
     /* Construct acceleration structure */
-    struct ms_edges edges = init_acceleration_struct(mesh);
-    struct ms_accel accel = init_old_acceleration_struct(mesh);
+    struct ms_edges accel = init_acceleration_struct(mesh);
     
     /* Edge points */
     int nedge_pointsv = 0;
-    struct ms_v3 *edge_pointsv = malloc64(edges.count * sizeof(struct ms_v3));
+    struct ms_v3 *edge_pointsv = malloc64(accel.count * sizeof(struct ms_v3));
     int *edge_points = malloc64(mesh.nfaces * 4 * sizeof(int));
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
     
     for (int start = 0; start < mesh.nverts; ++start) {
-        int from = edges.offsets[start];
-        int to = edges.offsets[start + 1];
+        int from = accel.offsets[start];
+        int to = accel.offsets[start + 1];
         
         for (int e = from; e < to; ++e) {
-            struct ms_edge edge = edges.edges[e];
+            struct ms_edge edge = accel.edges[e];
             
             struct ms_v3 startv = mesh.vertices[start];
             struct ms_v3 endv = mesh.vertices[edge.end];
@@ -190,8 +189,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCZoneEnd(subdivide);
     
-    free(edges.edges);
-    free(edges.offsets);
+    free(accel.edges);
+    free(accel.offsets);
     
     free(accel.verts_starts);
     free(accel.verts_matrix);

@@ -83,4 +83,8 @@ struct ms_edges {
     struct ms_edge *edges;
     int *offsets;
     int count;
+    
+    int *verts_starts;
+    int *faces_matrix;
+    int *verts_matrix;
 };
