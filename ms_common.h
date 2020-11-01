@@ -59,17 +59,11 @@ struct ms_v3 {
 };
 
 struct ms_edge {
-    struct ms_v3 startv;
-    struct ms_v3 endv;
-    struct ms_v3 facepoint_1;
-    struct ms_v3 facepoint_2;
-    
     int face_1;
     int face_2;
     int findex_1;
     int findex_2;
-    
-    int end; /* 72 bytes :((((( */
+    int end;
 };
 
 struct ms_mesh {
@@ -80,7 +74,6 @@ struct ms_mesh {
 };
 
 struct ms_accel {
-    int *faces_starts;
     int *verts_starts;
     int *faces_matrix;
     int *verts_matrix;

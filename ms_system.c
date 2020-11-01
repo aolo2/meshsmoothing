@@ -257,6 +257,8 @@ ms_file_obj_read_fast(char *filename)
 static void
 ms_file_obj_write_file(char *filename, struct ms_mesh mesh)
 {
+    printf("[INFO] Dumping file %s...\n", filename);
+    
     FILE *file = fopen(filename, "wb");
     assert(file);
     
@@ -270,6 +272,8 @@ ms_file_obj_write_file(char *filename, struct ms_mesh mesh)
                 mesh.faces[f * 4 + 0] + 1, mesh.faces[f * 4 + 1] + 1,
                 mesh.faces[f * 4 + 2] + 1, mesh.faces[f * 4 + 3] + 1);
     }
+    
+    printf("[INFO] File %s dumped\n", filename); 
     
     fclose(file);
 }

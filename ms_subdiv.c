@@ -22,7 +22,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     TracyCZoneEnd(compute_face_points);
     
     /* Construct acceleration structure */
-    struct ms_edges edges = init_acceleration_struct(mesh, face_points);
+    struct ms_edges edges = init_acceleration_struct(mesh);
     struct ms_accel accel = init_old_acceleration_struct(mesh);
     
     /* Edge points */
@@ -39,8 +39,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         for (int e = from; e < to; ++e) {
             struct ms_edge edge = edges.edges[e];
             
-            struct ms_v3 startv = edge.startv;
-            struct ms_v3 endv = edge.endv;
+            struct ms_v3 startv = mesh.vertices[start];
+            struct ms_v3 endv = mesh.vertices[edge.end];
             
             int face = edge.face_1;
             int adj  = edge.face_2;
@@ -48,8 +48,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             struct ms_v3 edge_point;
             
             if (adj != face) {
-                struct ms_v3 face_point_me = edge.facepoint_1;
-                struct ms_v3 face_point_adj = edge.facepoint_2;
+                struct ms_v3 face_point_me = face_points[face];
+                struct ms_v3 face_point_adj = face_points[adj];
                 
                 edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
                 edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
@@ -80,89 +80,45 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         struct ms_v3 new_vert;
         
         int adj_verts_base = accel.verts_starts[v];
-        int adj_faces_base = accel.faces_starts[v];
-        
         int adj_verts_count = accel.verts_starts[v + 1] - adj_verts_base;
-        int adj_faces_count = accel.faces_starts[v + 1] - adj_faces_base;
+        f32 norm_coeff = 1.0f / adj_verts_count;
         
-        f32 one_over_adj_faces_count = 1.0f / adj_faces_count;
+        struct ms_v3 avg_face_point = { 0 };
+        struct ms_v3 avg_mid_edge_point = { 0 };
         
-        if (adj_faces_count != adj_verts_count) {
-#if 0
-            /* This vertex is on an edge of a hole */
-            int nedges_adj_to_hole = 0;
-            struct ms_v3 avg_mid_edge_point = { 0 };
-            
-            for (int i = 0; i < adj_verts_count; ++i) {
-                int start = v;
-                int end = accel.verts_matrix[adj_verts_base + i];
-                
-                struct ms_v3 startv = mesh.vertices[start];
-                struct ms_v3 endv = mesh.vertices[end];
-                
-                /* Only take into account edges that are also on the edge of a hole */
-                struct ms_v2i adj_faces = edge_adjacent_faces(&accel, start, end);
-                int adj_face = adj_faces.a;
-                int another_adj_face = adj_faces.b;
-                
-                if (adj_face == another_adj_face) {
-                    ++nedges_adj_to_hole;
-                    avg_mid_edge_point.x += (startv.x + endv.x);
-                    avg_mid_edge_point.y += (startv.y + endv.y);
-                    avg_mid_edge_point.z += (startv.z + endv.z);
-                }
-            }
-            
-            f32 one_over_adj_to_hole = 1.0f / (nedges_adj_to_hole + 1);
-            
-            avg_mid_edge_point.x *= 0.5f;
-            avg_mid_edge_point.y *= 0.5f;
-            avg_mid_edge_point.z *= 0.5f;
-            
-            new_vert.x = (avg_mid_edge_point.x + vertex.x) * one_over_adj_to_hole;
-            new_vert.y = (avg_mid_edge_point.y + vertex.y) * one_over_adj_to_hole;
-            new_vert.z = (avg_mid_edge_point.z + vertex.z) * one_over_adj_to_hole;
-#endif
-        } else {
+        for (int i = 0; i < adj_verts_count; ++i) {
             /* Average of face points of all the faces this vertex is adjacent to */
-            struct ms_v3 avg_face_point = { 0 };
-            for (int i = 0; i < adj_faces_count; ++i) {
-                struct ms_v3 fp = face_points[accel.faces_matrix[adj_faces_base + i]];
-                avg_face_point.x += fp.x;
-                avg_face_point.y += fp.y;
-                avg_face_point.z += fp.z;
-            }
-            avg_face_point.x *= one_over_adj_faces_count;
-            avg_face_point.y *= one_over_adj_faces_count;
-            avg_face_point.z *= one_over_adj_faces_count;
+            struct ms_v3 fp = face_points[accel.faces_matrix[adj_verts_base + i]];
+            avg_face_point.x += fp.x;
+            avg_face_point.y += fp.y;
+            avg_face_point.z += fp.z;
             
             /* Average of mid points of all the edges this vertex is adjacent to */
-            struct ms_v3 avg_mid_edge_point = { 0 };
-            for (int i = 0; i < adj_verts_count; ++i) {
-                int end = accel.verts_matrix[adj_verts_base + i];
-                
-                struct ms_v3 endv = mesh.vertices[end];
-                
-                avg_mid_edge_point.x += (vertex.x + endv.x) * 0.5f;
-                avg_mid_edge_point.y += (vertex.y + endv.y) * 0.5f;
-                avg_mid_edge_point.z += (vertex.z + endv.z) * 0.5f;
-            }
+            int end = accel.verts_matrix[adj_verts_base + i];
+            struct ms_v3 endv = mesh.vertices[end];
             
-            f32 norm_coeff = 1.0f / adj_verts_count;
-            avg_mid_edge_point.x *= norm_coeff;
-            avg_mid_edge_point.y *= norm_coeff;
-            avg_mid_edge_point.z *= norm_coeff;
-            
-            /* Weights */
-            f32 w1 = (f32) (adj_faces_count - 3) * one_over_adj_faces_count;
-            f32 w2 = one_over_adj_faces_count;
-            f32 w3 = 2.0f * w2;
-            
-            /* Weighted average to obtain a new vertex */
-            new_vert.x = w1 * vertex.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
-            new_vert.y = w1 * vertex.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
-            new_vert.z = w1 * vertex.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
+            avg_mid_edge_point.x += (vertex.x + endv.x) * 0.5f;
+            avg_mid_edge_point.y += (vertex.y + endv.y) * 0.5f;
+            avg_mid_edge_point.z += (vertex.z + endv.z) * 0.5f;
         }
+        
+        avg_face_point.x *= norm_coeff;
+        avg_face_point.y *= norm_coeff;
+        avg_face_point.z *= norm_coeff;
+        
+        avg_mid_edge_point.x *= norm_coeff;
+        avg_mid_edge_point.y *= norm_coeff;
+        avg_mid_edge_point.z *= norm_coeff;
+        
+        /* Weights */
+        f32 w1 = (f32) (adj_verts_count - 3) * norm_coeff;
+        f32 w2 = norm_coeff;
+        f32 w3 = 2.0f * w2;
+        
+        /* Weighted average to obtain a new vertex */
+        new_vert.x = w1 * vertex.x + w2 * avg_face_point.x + w3 * avg_mid_edge_point.x;
+        new_vert.y = w1 * vertex.y + w2 * avg_face_point.y + w3 * avg_mid_edge_point.y;
+        new_vert.z = w1 * vertex.z + w2 * avg_face_point.z + w3 * avg_mid_edge_point.z;
         
         new_verts[v] = new_vert;
     }
@@ -233,6 +189,18 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     }
     
     TracyCZoneEnd(subdivide);
+    
+    free(edges.edges);
+    free(edges.offsets);
+    
+    free(accel.verts_starts);
+    free(accel.verts_matrix);
+    free(accel.faces_matrix);
+    
+    free(edge_pointsv);
+    free(new_verts);
+    free(edge_points);
+    free(face_points);
     
     TracyCZoneEnd(__FUNC__);
     

@@ -70,8 +70,6 @@ v1 ----- v2
     
     result.verts_starts = offsets;
     result.verts_matrix = edges;
-    
-    result.faces_starts = offsets;
     result.faces_matrix = faces;
     
     TracyCZoneEnd(__FUNC__);

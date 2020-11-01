@@ -81,6 +81,9 @@ main(int argc, char *argv[])
             }
         }
         
+        free(mesh.faces);
+        free(mesh.vertices);
+        
         u64 usec_after = usec_now();
         printf("[TIME] Total time elapsed %.f ms\n", (usec_after - usec_before) / 1000.0f);
     } else {
@@ -99,9 +102,6 @@ main(int argc, char *argv[])
             
             free(new_mesh.vertices);
             free(new_mesh.faces);
-            
-            TracyCFree(new_mesh.vertices);
-            TracyCFree(new_mesh.faces);
             
             iteration_cycles[i] = (f32) (after - before) / (mesh.nfaces * 4);
             total_total_cycles += (f32) (after - before) / (mesh.nfaces * 4);
