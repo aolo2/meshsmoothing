@@ -10,6 +10,7 @@
 #    include "ms_subdiv_mt.c"
 #else
 #    include "ms_subdiv_csr.c"
+#    include "ms_accel.c"
 #    include "ms_subdiv.c"
 #endif
 

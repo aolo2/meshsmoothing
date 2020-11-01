@@ -618,3 +618,19 @@ edge_points[edge_index_2] = nedge_pointsv;
 
 
 IDEA: pay for all cache misses once, create a (probably HUGE) linear structure
+
+
+
+
+----
+obj wavefront kinda~~~ guarantiess counter-clockwise
+this means we can one-pass collect all edges (no duplicated)
+
+add all start < end
+then add all start > end each start will be found in accel[end], because it has already been added
+
+faces_offsets is the same as edges_offsets
+face has each vertex once, means we can add face to accel[v]
+
+FIRST TRY [TIME] avg: 170.8 cycles/v | sigma: 3.41
+WEEE!!!!!!

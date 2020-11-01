@@ -1,3 +1,24 @@
+static void *
+malloc64(long long size)
+{
+    void *result = NULL;
+    assert(size > 0);
+    posix_memalign((void **) &result, 64, size);
+    assert(result);
+    return(result);
+}
+
+static void *
+calloc64(long long size)
+{
+    void *result = NULL;
+    assert(size > 0);
+    posix_memalign((void **) &result, 64, size);
+    assert(result);
+    memset(result, 0x00, size);
+    return(result);
+}
+
 static u64
 usec_now(void)
 {
@@ -223,7 +244,6 @@ ms_file_obj_read_fast(char *filename)
     
     struct ms_mesh mesh = { 0 };
     
-    mesh.degree = 4;
     mesh.nverts = nverts;
     mesh.nfaces = nfaces;
     mesh.vertices = verts;
