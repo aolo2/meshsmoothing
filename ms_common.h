@@ -6,8 +6,10 @@
 #include <assert.h>     /* for assert */
 #include <ctype.h>      /* for isspace, isalpha etc */
 #include <time.h>       /* for clock_gettime */
-#include <math.h>       /* for sqrtf */
-#include <immintrin.h>  /* SIMD intrinsics */
+
+#ifdef MT
+#include <omp.h>
+#endif
 
 #ifdef PROFILE
 #    include "external/tracy/TracyC.h"
@@ -19,7 +21,7 @@
 #    define TracyCFree(...)
 #endif
 
-#define MAX_BENCH_ITERATIONS 100
+#define MAX_BENCH_ITERATIONS 1000
 #define SWAP(a, b) { typeof(a) tmp___ = (a); (a) = (b); (b) = tmp___; }
 
 typedef int64_t s64;
@@ -40,18 +42,6 @@ struct ms_buffer {
     u64 size;
 };
 
-struct ms_v2i {
-    int a;
-    int b;
-};
-
-struct ms_v4i {
-    s32 a;
-    s32 b;
-    s32 c;
-    s32 d;
-};
-
 struct ms_v3 {
     f32 x;
     f32 y;
@@ -63,6 +53,7 @@ struct ms_edge {
     int face_2;
     int findex_1;
     int findex_2;
+    int start;
     int end;
 };
 
@@ -73,15 +64,8 @@ struct ms_mesh {
     int nfaces;
 };
 
-struct ms_accel {
-    int *verts_starts;
-    int *faces_matrix;
-    int *verts_matrix;
-};
-
 struct ms_edges {
     struct ms_edge *edges;
-    int *offsets;
     int count;
     
     int *verts_starts;

@@ -1,17 +1,8 @@
 #include "ms_common.h"
-#include "ms_system.c"
 
-#ifdef MT
-#    ifndef NTHREADS
-#        define NTHREADS 6
-#    endif
-#    include <omp.h>
-#    include "ms_subdiv_csr_mt.c"
-#    include "ms_subdiv_mt.c"
-#else
-#    include "ms_subdiv_csr.c"
-#    include "ms_subdiv.c"
-#endif
+#include "ms_system.c"
+#include "ms_subdiv_csr.c"
+#include "ms_subdiv.c"
 
 int
 main(int argc, char *argv[])
@@ -122,9 +113,7 @@ main(int argc, char *argv[])
             stdev /= (bench_itearitons - 1);
         }
         
-        stdev = sqrtf(stdev);
-        
-        printf("[TIME] avg: %.1f cycles/v | sigma: %.2f\n", avg, stdev);
+        printf("[TIME] avg: %.1f cycles/v\n", avg);
         printf("[TIME] avg: %.1f ms per subdivision of %d vertex mesh\n", (usec_after - usec_before) / 1000.0f / bench_itearitons, mesh.nverts);
     }
     

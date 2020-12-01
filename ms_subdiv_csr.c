@@ -4,6 +4,7 @@ add_edge_1(int start, int end, int findex, int face,
 {
     struct ms_edge edge;
     
+    edge.start = start;
     edge.end = end;
     
     edge.findex_1 = findex;
@@ -153,6 +154,7 @@ v1 ----- v2
     
     TracyCZoneEnd(add_ends);
     
+    free(offsets);
     free(edges_accum);
     free(edges_accum_simple);
     
@@ -160,7 +162,6 @@ v1 ----- v2
     
     result.count = nedges;
     result.edges = edges;
-    result.offsets = offsets;
     
     result.verts_starts = offsets_both;
     result.verts_matrix = edges_simple;

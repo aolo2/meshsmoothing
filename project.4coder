@@ -46,18 +46,9 @@ command_list = {
 		.save_dirty_files = true,
 		.cursor_at_end = false,
 	    .cmd = {{ "make profile_fast", .os = "linux" }},
-    },
-	{
-		.name = "analyze",
-   	 .out = "*compilation*",
-		.footer_panel = false,
-		.save_dirty_files = true,
-		.cursor_at_end = false,
-	    .cmd = {{ "make analyze", .os = "linux" }},
     }
 };
 	      
 fkey_command[1] = "build debug";
 fkey_command[2] = "build release";
 fkey_command[3] = "build profile fast";
-fkey_command[4] = "analyze";

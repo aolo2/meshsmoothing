@@ -3,8 +3,27 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
 {
     TracyCZone(__FUNC__, true);
     
+    /* Construct acceleration structure */
+    struct ms_edges accel = init_acceleration_struct(mesh);
+    
+    TracyCZoneN(alloc_new_mesh, "allocate", true);
     /* Face points */
     struct ms_v3 *face_points = malloc64(mesh.nfaces * sizeof(struct ms_v3));
+    
+    /* Edge points */
+    struct ms_v3 *edge_pointsv = malloc64(accel.count * sizeof(struct ms_v3));
+    int *edge_points = malloc64(mesh.nfaces * 4 * sizeof(int));
+    
+    /* Update points */
+    struct ms_v3 *new_verts = malloc64(mesh.nverts * sizeof(struct ms_v3));
+    
+    /* Subdivide */
+    struct ms_mesh new_mesh = { 0 };
+    new_mesh.nfaces = mesh.nfaces * 4;
+    
+    /* Updated vertices + edge points + 1 face point per face */
+    new_mesh.faces = malloc64(new_mesh.nfaces * 4 * sizeof(int));
+    TracyCZoneEnd(alloc_new_mesh);
     
     TracyCZoneN(compute_face_points, "face points", true);
     
@@ -21,57 +40,39 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
     
     TracyCZoneEnd(compute_face_points);
     
-    /* Construct acceleration structure */
-    struct ms_edges accel = init_acceleration_struct(mesh);
-    
-    /* Edge points */
-    int nedge_pointsv = 0;
-    struct ms_v3 *edge_pointsv = malloc64(accel.count * sizeof(struct ms_v3));
-    int *edge_points = malloc64(mesh.nfaces * 4 * sizeof(int));
-    
     TracyCZoneN(compute_edge_points, "edge_points", true);
     
-    for (int start = 0; start < mesh.nverts; ++start) {
-        int from = accel.offsets[start];
-        int to = accel.offsets[start + 1];
+    for (int e = 0; e < accel.count; ++e) {
+        struct ms_edge edge = accel.edges[e];
         
-        for (int e = from; e < to; ++e) {
-            struct ms_edge edge = accel.edges[e];
+        struct ms_v3 startv = mesh.vertices[edge.start];
+        struct ms_v3 endv = mesh.vertices[edge.end];
+        
+        int face = edge.face_1;
+        int adj  = edge.face_2;
+        
+        struct ms_v3 edge_point;
+        
+        if (adj != face) {
+            struct ms_v3 face_point_me = face_points[face];
+            struct ms_v3 face_point_adj = face_points[adj];
             
-            struct ms_v3 startv = mesh.vertices[start];
-            struct ms_v3 endv = mesh.vertices[edge.end];
-            
-            int face = edge.face_1;
-            int adj  = edge.face_2;
-            
-            struct ms_v3 edge_point;
-            
-            if (adj != face) {
-                struct ms_v3 face_point_me = face_points[face];
-                struct ms_v3 face_point_adj = face_points[adj];
-                
-                edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
-                edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
-                edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
-            } else {
-                /* This is an edge of a hole */
-                edge_point.x = (startv.x + endv.x) * 0.5f;
-                edge_point.y = (startv.y + endv.y) * 0.5f;
-                edge_point.z = (startv.z + endv.z) * 0.5f;
-            }
-            
-            edge_pointsv[nedge_pointsv] = edge_point;
-            
-            edge_points[face * 4 + edge.findex_1] = nedge_pointsv;
-            edge_points[adj  * 4 + edge.findex_2] = nedge_pointsv;
-            
-            ++nedge_pointsv;
+            edge_point.x = (face_point_me.x + face_point_adj.x + startv.x + endv.x) * 0.25f;
+            edge_point.y = (face_point_me.y + face_point_adj.y + startv.y + endv.y) * 0.25f;
+            edge_point.z = (face_point_me.z + face_point_adj.z + startv.z + endv.z) * 0.25f;
+        } else {
+            /* This is an edge of a hole */
+            edge_point.x = (startv.x + endv.x) * 0.5f;
+            edge_point.y = (startv.y + endv.y) * 0.5f;
+            edge_point.z = (startv.z + endv.z) * 0.5f;
         }
+        
+        edge_pointsv[e] = edge_point;
+        
+        edge_points[face * 4 + edge.findex_1] = e;
+        edge_points[adj  * 4 + edge.findex_2] = e;
     }
     TracyCZoneEnd(compute_edge_points);
-    
-    /* Update points */
-    struct ms_v3 *new_verts = malloc64(mesh.nverts * sizeof(struct ms_v3));
     
     TracyCZoneN(update_positions, "update old points", true);
     for (int v = 0; v < mesh.nverts; ++v) {
@@ -121,29 +122,22 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
         
         new_verts[v] = new_vert;
     }
+    
     TracyCZoneEnd(update_positions);
     
-    /* Subdivide */
-    TracyCZoneN(alloc_new_mesh, "allocate", true);
-    struct ms_mesh new_mesh = { 0 };
-    new_mesh.nfaces = mesh.nfaces * 4;
-    
-    /* Updated vertices + edge points + 1 face point per face */
-    new_mesh.nverts = mesh.nverts + nedge_pointsv + mesh.nfaces;
-    new_mesh.vertices = malloc64(new_mesh.nverts * sizeof(struct ms_v3));
-    new_mesh.faces = malloc64(new_mesh.nfaces * 4 * sizeof(int));
-    TracyCZoneEnd(alloc_new_mesh);
-    
     TracyCZoneN(copy_data, "copy unique points", true);
+    new_mesh.nverts = mesh.nverts + accel.count + mesh.nfaces;
+    new_mesh.vertices = malloc64(new_mesh.nverts * sizeof(struct ms_v3));
+    
     memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
-    memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, nedge_pointsv * sizeof(struct ms_v3));
-    memcpy(new_mesh.vertices + mesh.nverts + nedge_pointsv, face_points, mesh.nfaces * sizeof(struct ms_v3));
+    memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, accel.count * sizeof(struct ms_v3));
+    memcpy(new_mesh.vertices + mesh.nverts + accel.count, face_points, mesh.nfaces * sizeof(struct ms_v3));
     TracyCZoneEnd(copy_data);
     
-    int vert_base = mesh.nverts + nedge_pointsv;
+    TracyCZoneN(subdivide, "do subdivision", true);
+    int vert_base = mesh.nverts + accel.count;
     int ep_base = mesh.nverts;
     
-    TracyCZoneN(subdivide, "do subdivision", true);
     for (int face = 0; face < mesh.nfaces; ++face) {
         int face_base = face * 16;
         
@@ -186,11 +180,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh mesh)
             new_mesh.faces[face_base + 15] = edge_point_cd;
         }
     }
-    
     TracyCZoneEnd(subdivide);
     
+    
     free(accel.edges);
-    free(accel.offsets);
     
     free(accel.verts_starts);
     free(accel.verts_matrix);

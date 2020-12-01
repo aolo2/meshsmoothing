@@ -640,3 +640,29 @@ Returned indirect indexing so that ms_edge is not that huge (saw many cycles in 
 ...
 [TIME] avg: 135.5 cycles/v | sigma: 2.09
 !!!!!!!
+
+
+
+
+----
+remove nedge_pointsv (gives nothing but a smile)
+----
+
+
+----
+count = n unique edges
+
+// mesh
+vertices: nverts * 3 * 4
+faces:    nfaces * 4 * 4
+
+// accel
+edges:        count * 6 * 4
+offsets:      nverts * 4
+verts_starts: nverts * 4
+faces_matrix: count * 2 * 4
+verts_starts: count * 2 * 4
+----
+
+
+
