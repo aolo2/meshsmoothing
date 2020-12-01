@@ -42,23 +42,21 @@ struct ms_buffer {
     u64 size;
 };
 
-struct ms_v3 {
-    f32 x;
-    f32 y;
-    f32 z;
-};
-
+#pragma pack(push, 1)
 struct ms_edge {
     int face_1;
     int face_2;
-    int findex_1;
-    int findex_2;
     int start;
     int end;
+    u8 findex_1;
+    u8 findex_2;
 };
+#pragma pack(pop)
 
 struct ms_mesh {
-    struct ms_v3 *vertices;
+    f32 *vertices_x;
+    f32 *vertices_y;
+    f32 *vertices_z;
     int *faces;
     int nverts;
     int nfaces;

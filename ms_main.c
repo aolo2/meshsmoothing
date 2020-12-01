@@ -13,6 +13,8 @@ main(int argc, char *argv[])
     }
     
     struct ms_mesh mesh = ms_file_obj_read_fast(argv[1]);
+    printf("[INFO] Loaded OBJ file with\n\t%d vertices\n\t%d quads\n\t%d indices\n", mesh.nverts, mesh.nfaces, mesh.nfaces * 4);
+    
     int iterations = atoi(argv[2]);
     int bench_itearitons = -1;
     char output_filename[512] = { 0 };
@@ -46,10 +48,16 @@ main(int argc, char *argv[])
             struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
             u64 after = cycles_now();
             
-            free(mesh.vertices);
+            free(mesh.vertices_x);
+            free(mesh.vertices_y);
+            free(mesh.vertices_z);
+            
             free(mesh.faces);
             
-            TracyCFree(mesh.vertices);
+            TracyCFree(mesh.vertices_x);
+            TracyCFree(mesh.vertices_y);
+            TracyCFree(mesh.vertices_z);
+            
             TracyCFree(mesh.faces);
             
             mesh = new_mesh;
@@ -72,7 +80,10 @@ main(int argc, char *argv[])
         }
         
         free(mesh.faces);
-        free(mesh.vertices);
+        
+        free(mesh.vertices_x);
+        free(mesh.vertices_y);
+        free(mesh.vertices_z);
         
         u64 usec_after = usec_now();
         printf("[TIME] Total time elapsed %.f ms\n", (usec_after - usec_before) / 1000.0f);
@@ -90,7 +101,10 @@ main(int argc, char *argv[])
             struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
             u64 after = cycles_now();
             
-            free(new_mesh.vertices);
+            free(new_mesh.vertices_x);
+            free(new_mesh.vertices_y);
+            free(new_mesh.vertices_z);
+            
             free(new_mesh.faces);
             
             iteration_cycles[i] = (f32) (after - before) / (mesh.nfaces * 4);

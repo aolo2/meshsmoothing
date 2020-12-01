@@ -21,8 +21,9 @@ static inline void
 add_edge_2(int start, int end, int findex, int face,
            struct ms_edge *edges, int *edges_accum, int *offsets)
 {
+    int base = offsets[end];
     for (int i = 0; i < edges_accum[end]; ++i) {
-        struct ms_edge *edge = edges + (offsets[end] + i);
+        struct ms_edge *edge = edges + base + i;
         if (edge->end == start) {
             /*
 This is guaranteed to happen, because:
@@ -110,20 +111,20 @@ v1 ----- v2
         if (v3 < v4) add_edge_1(v3, v4, 2, actual_face, edges, edges_accum, offsets);
         if (v4 < v1) add_edge_1(v4, v1, 3, actual_face, edges, edges_accum, offsets);
         
-        edges_simple[offsets_both[v1] + edges_accum_simple[v1]] = v2;
-        edges_simple[offsets_both[v2] + edges_accum_simple[v2]] = v3;
-        edges_simple[offsets_both[v3] + edges_accum_simple[v3]] = v4;
-        edges_simple[offsets_both[v4] + edges_accum_simple[v4]] = v1;
+        int i1 = offsets_both[v1] + edges_accum_simple[v1]++;
+        int i2 = offsets_both[v2] + edges_accum_simple[v2]++;
+        int i3 = offsets_both[v3] + edges_accum_simple[v3]++;
+        int i4 = offsets_both[v4] + edges_accum_simple[v4]++;
         
-        faces_simple[offsets_both[v1] + edges_accum_simple[v1]] = actual_face;
-        faces_simple[offsets_both[v2] + edges_accum_simple[v2]] = actual_face;
-        faces_simple[offsets_both[v3] + edges_accum_simple[v3]] = actual_face;
-        faces_simple[offsets_both[v4] + edges_accum_simple[v4]] = actual_face;
+        edges_simple[i1] = v2;
+        edges_simple[i2] = v3;
+        edges_simple[i3] = v4;
+        edges_simple[i4] = v1;
         
-        edges_accum_simple[v1]++;
-        edges_accum_simple[v2]++;
-        edges_accum_simple[v3]++;
-        edges_accum_simple[v4]++;
+        faces_simple[i1] = actual_face;
+        faces_simple[i2] = actual_face;
+        faces_simple[i3] = actual_face;
+        faces_simple[i4] = actual_face;
     }
     
     TracyCZoneEnd(add_starts);

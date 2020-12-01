@@ -182,10 +182,15 @@ ms_file_obj_read_fast(char *filename)
         }
     }
     
-    struct ms_v3 *verts = malloc(nverts * sizeof(struct ms_v3));
+    f32 *verts_x = malloc(nverts * sizeof(f32));
+    f32 *verts_y = malloc(nverts * sizeof(f32));
+    f32 *verts_z = malloc(nverts * sizeof(f32));
+    
     int *faces = malloc(nfaces * 4 * sizeof(int));
     
-    assert(verts);
+    assert(verts_x);
+    assert(verts_y);
+    assert(verts_z);
     assert(faces);
     
     u32 verts_read = 0;
@@ -195,15 +200,13 @@ ms_file_obj_read_fast(char *filename)
     for (u64 i = 0; i < size - 1; ++i) {
         if (nl) {
             if (buffer[i] == 'v' && isspace(buffer[i + 1])) {
-                struct ms_v3 vertex = { 0 };
-                
                 ++i;
                 
-                vertex.x = read_float(buffer, i, size, &i);
-                vertex.y = read_float(buffer, i, size, &i);
-                vertex.z = read_float(buffer, i, size, &i);
+                verts_x[verts_read] = read_float(buffer, i, size, &i);
+                verts_y[verts_read] = read_float(buffer, i, size, &i);
+                verts_z[verts_read] = read_float(buffer, i, size, &i);
                 
-                verts[verts_read++] = vertex;
+                ++verts_read;
             } else if (buffer[i] == 'f' && isspace(buffer[i + 1])) {
                 
                 ++i;
@@ -246,7 +249,9 @@ ms_file_obj_read_fast(char *filename)
     
     mesh.nverts = nverts;
     mesh.nfaces = nfaces;
-    mesh.vertices = verts;
+    mesh.vertices_x = verts_x;
+    mesh.vertices_y = verts_y;
+    mesh.vertices_z = verts_z;
     mesh.faces = faces;
     
     TracyCZoneEnd(__FUNC__);
@@ -263,8 +268,7 @@ ms_file_obj_write_file(char *filename, struct ms_mesh mesh)
     assert(file);
     
     for (int v = 0; v < mesh.nverts; ++v) {
-        struct ms_v3 vertex = mesh.vertices[v];
-        fprintf(file, "v %f %f %f\n", vertex.x, vertex.y, vertex.z);
+        fprintf(file, "v %f %f %f\n", mesh.vertices_x[v], mesh.vertices_y[v], mesh.vertices_z[v]);
     }
     
     for (int f = 0; f < mesh.nfaces; ++f) {

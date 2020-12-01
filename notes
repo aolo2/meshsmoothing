@@ -662,6 +662,100 @@ offsets:      nverts * 4
 verts_starts: nverts * 4
 faces_matrix: count * 2 * 4
 verts_starts: count * 2 * 4
+
+
+
+
+
+
+
+== count edges (mesh.nfaces repeats)
+4 int reads (from mesh.faces)
+4-8 int writes (to offsets/offsets_both)
+
+== propogate offsets
+mesh.nverts int reads (from offsets)
+mesh.nverts int reads (from offsets_both)
+mesh.nverts int writes (to offsets)
+mesh.nverts int write (to offsets_both)
+
+== edges first pass (mesh.nfaces)
+4 int reads (from mesh.faces)
+
+0-4 int read (from offsets)
+0-4 int read + 0-4 int write (from to edges_accum)
+0-4 ms_edge writes (to edges)
+
+4 int reads (from offsets_both) (misses?)
+4 int reads (from edges_accum_simple) (misses?)
+4 int read + 4 int write (from to edges_accum_simple) (all miss prob)
+
+
+== edges second pass (mesh.nfaces)
+4 int reads (from mesh.faces)
+
+4x
+  1 int read from edges_accum
+  1 int reads from offsets
+  2 int writes to edges
+
+
+
+== face points (nverts repeats):
+reads 4 ints from mesh.faces
+read 4 ms_v3 from mesh.vertices (4 cache misses)
+write 1 ms_v3 to face_points
+
+== edge points (count repeats):
+read 1 ms_edge from accel.edges
+read 2 ms_v3 from mesh.vertcies (cache miss on edge.end)
+read 2 ms_v3 from face_points
+write 1 ms_v3 to edge_pointsv
+write 2 ints to edge_points (2 cache misses)
+
+== update points (nverts repeats):
+read 1 ms_v3 (from mesh.vertices)
+read 2 ints (from accel.verts_starts)
+
+read a few (3-6) ints (from accel.faces_matrix)
+read the same few (3-6) ms_v3 (from face_points)
+read 1 int (from accel.verts_matrix)
+read 1 ms_v3 (from mesh.vertices)
+
+write 1 ms_v3 (to new_verts)
+
+== copy unique
+memcpy(new_mesh.vertices, new_verts, mesh.nverts * sizeof(struct ms_v3));
+memcpy(new_mesh.vertices + mesh.nverts, edge_pointsv, accel.count * sizeof(struct ms_v3));
+memcpy(new_mesh.vertices + mesh.nverts + accel.count, face_points, mesh.nfaces * sizeof(struct ms_v3));
+
+== do subdivision (mesh.nfaces repeats)
+read 4 ints from mesh.faces (from mesh.faces)
+read 4 int from edge_points (from edge_points)
+
+write 16 ints (to new_mesh.faces)
+
+>>> 768432 * (4 * 4 + 6 * 4) + 1310688 * (4 + 4 + 4 + 4) + 786432 * (4 * 4 + 2 * 4 + 2 * 4 + 2 * 4 + 2 * 6 * 4 + 4 * 4 + 4 * 4 + 8 * 4) + 768432 * (4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 * 2)
+232720512
+>>> 1310688 * (4 * 4 + 4 * 4 * 3 + 4 * 3) + 2 * 1310688 * (1 * 6 * 4 + 2 * 4 * 3 + 2 * 4 + 3 + 1 * 4 * 3 + 2 * 4) + 1310688 * (4 * 3 + 2 * 4 + 4 * 4 + 4 * 4 * 3 + 4 + 4 * 3 + 4 * 3) + 1310688 * 4 * 3 + 1310688 * 2 * 4 * 3 + 768432 * 4 * 3 + 768432 * (4 * 4 + 4 * 4 + 16 * 4)
+583673472
+>>> 232720512 + 583673472
+816393984
+>>> 816393984 / 1024
+797259.75
+>>> 816393984 / 1024 / 1024
+778.573974609375
+>>> 816393984 / 1024 / 1024 / 1024 / 4
+0.19008153676986694
+>>> 778 / 10000
+0.0778
+>>> 778 / 20000
+0.0389
+>>> 778 / 20
+38.9
+>>> 778 / 10
+77.8l
+
 ----
 
 
