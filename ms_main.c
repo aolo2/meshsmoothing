@@ -45,7 +45,7 @@ main(int argc, char *argv[])
             int size = mesh.nfaces * 4;
             
             u64 before = cycles_now();
-            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(&mesh);
             u64 after = cycles_now();
             
             free(mesh.vertices_x);
@@ -98,7 +98,7 @@ main(int argc, char *argv[])
             fflush(stdout);
             
             u64 before = cycles_now();
-            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(mesh);
+            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(&mesh);
             u64 after = cycles_now();
             
             free(new_mesh.vertices_x);

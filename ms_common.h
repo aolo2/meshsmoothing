@@ -6,6 +6,7 @@
 #include <assert.h>     /* for assert */
 #include <ctype.h>      /* for isspace, isalpha etc */
 #include <time.h>       /* for clock_gettime */
+#include <immintrin.h>  /* for SIMD */
 
 #ifdef MT
 #include <omp.h>

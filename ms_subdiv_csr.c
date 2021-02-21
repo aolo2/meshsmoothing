@@ -39,21 +39,21 @@ This is guaranteed to happen, because:
 }
 
 static struct ms_edges
-init_acceleration_struct(struct ms_mesh mesh)
+init_acceleration_struct(struct ms_mesh *mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    int *offsets = calloc64((mesh.nverts + 1) * sizeof(int));
-    int *offsets_both = calloc64((mesh.nverts + 1) * sizeof(int));
+    int *offsets = calloc64((mesh->nverts + 1) * sizeof(int));
+    int *offsets_both = calloc64((mesh->nverts + 1) * sizeof(int));
     
     TracyCZoneN(count, "count edges", true);
     
     /* Count edges */
-    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
-        int v1 = mesh.faces[face + 0];
-        int v2 = mesh.faces[face + 1];
-        int v3 = mesh.faces[face + 2];
-        int v4 = mesh.faces[face + 3];
+    for (int face = 0; face < mesh->nfaces * 4; face += 4) {
+        int v1 = mesh->faces[face + 0];
+        int v2 = mesh->faces[face + 1];
+        int v3 = mesh->faces[face + 2];
+        int v4 = mesh->faces[face + 3];
         
         if (v1 < v2) offsets[v1 + 1]++;
         if (v2 < v3) offsets[v2 + 1]++;
@@ -71,7 +71,7 @@ init_acceleration_struct(struct ms_mesh mesh)
     TracyCZoneN(propogate, "propogate offsets", true);
     
     /* Propogate offsets */
-    for (int v = 1; v < mesh.nverts + 1; ++v) {
+    for (int v = 1; v < mesh->nverts + 1; ++v) {
         offsets[v] += offsets[v - 1];
         offsets_both[v] += offsets_both[v - 1];
     }
@@ -81,8 +81,8 @@ init_acceleration_struct(struct ms_mesh mesh)
     
     TracyCZoneN(add_starts, "add edges first pass", true);
     
-    int nedges = offsets[mesh.nverts];
-    int nedges_both = offsets_both[mesh.nverts];
+    int nedges = offsets[mesh->nverts];
+    int nedges_both = offsets_both[mesh->nverts];
     struct ms_edge *edges = malloc64(nedges * sizeof(struct ms_edge));
     int *edges_accum = calloc64(nedges * sizeof(int));
     
@@ -90,11 +90,11 @@ init_acceleration_struct(struct ms_mesh mesh)
     int *faces_simple = malloc64(nedges_both * sizeof(int));
     int *edges_accum_simple = calloc64(nedges_both * sizeof(int));
     
-    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
-        int v1 = mesh.faces[face + 0];
-        int v2 = mesh.faces[face + 1];
-        int v3 = mesh.faces[face + 2];
-        int v4 = mesh.faces[face + 3];
+    for (int face = 0; face < mesh->nfaces * 4; face += 4) {
+        int v1 = mesh->faces[face + 0];
+        int v2 = mesh->faces[face + 1];
+        int v3 = mesh->faces[face + 2];
+        int v4 = mesh->faces[face + 3];
         
         int actual_face = face / 4;
         
@@ -131,11 +131,11 @@ v1 ----- v2
     
     TracyCZoneN(add_ends, "add edges second pass", true);
     
-    for (int face = 0; face < mesh.nfaces * 4; face += 4) {
-        int v1 = mesh.faces[face + 0];
-        int v2 = mesh.faces[face + 1];
-        int v3 = mesh.faces[face + 2];
-        int v4 = mesh.faces[face + 3];
+    for (int face = 0; face < mesh->nfaces * 4; face += 4) {
+        int v1 = mesh->faces[face + 0];
+        int v2 = mesh->faces[face + 1];
+        int v3 = mesh->faces[face + 2];
+        int v4 = mesh->faces[face + 3];
         
         int actual_face = face / 4;
         
@@ -171,4 +171,48 @@ v1 ----- v2
     TracyCZoneEnd(__FUNC__);
     
     return(result);
+}
+
+static void
+repack_mesh(struct ms_mesh *mesh)
+{
+    TracyCZone(__FUNC__, true);
+    
+    int counter = 0;
+    int *aliases = malloc(mesh->nverts * sizeof(int));
+    f32 *new_vertices_x = malloc(mesh->nverts * sizeof(f32));
+    f32 *new_vertices_y = malloc(mesh->nverts * sizeof(f32));
+    f32 *new_vertices_z = malloc(mesh->nverts * sizeof(f32));
+    
+    memset(aliases, -1, mesh->nverts * sizeof(int)); /* software prefetch :P */
+    
+    for (int v = 0; v < mesh->nfaces * 4; ++v) {
+        int vertex = mesh->faces[v];
+        if (aliases[vertex] == -1) {
+            aliases[vertex] = counter++;
+        }
+    }
+    
+    for (int v = 0; v < mesh->nfaces * 4; ++v) {
+        int alias = aliases[mesh->faces[v]];
+        mesh->faces[v] = alias;
+    }
+    
+    for (int v = 0; v < mesh->nverts; ++v) {
+        int alias = aliases[v];
+        new_vertices_x[alias] = mesh->vertices_x[v];
+        new_vertices_y[alias] = mesh->vertices_y[v];
+        new_vertices_z[alias] = mesh->vertices_z[v];
+    }
+    
+    free(aliases);
+    free(mesh->vertices_x);
+    free(mesh->vertices_y);
+    free(mesh->vertices_z);
+    
+    mesh->vertices_x = new_vertices_x;
+    mesh->vertices_y = new_vertices_y;
+    mesh->vertices_z = new_vertices_z;
+    
+    TracyCZoneEnd(__FUNC__);
 }

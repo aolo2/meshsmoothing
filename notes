@@ -760,3 +760,30 @@ write 16 ints (to new_mesh.faces)
 
 
 
+
+----
+__m128i indices = _mm_load_si128((__m128i *) (mesh.faces + face * 4));
+        
+__m128 xs = _mm_i32gather_ps(mesh.vertices_x, indices, 4);
+__m128 ys = _mm_i32gather_ps(mesh.vertices_y, indices, 4);
+__m128 zs = _mm_i32gather_ps(mesh.vertices_z, indices, 4);
+        
+face_points_x[face] = had_128(xs) * 0.25f;
+face_points_y[face] = had_128(ys) * 0.25f;
+face_points_z[face] = had_128(zs) * 0.25f;
+----
+
+
+
+
+
+
+TODO:
+remove copy unique points
+we know new_mesh.nverts ahead of time
+write new_verts_x/y/z , edge_pointsv_x/y/z, face_points_x/y/z straight to the final array
+
+
+
+
+HUGE WINS WITH repacking!!!
