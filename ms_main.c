@@ -13,7 +13,10 @@ main(int argc, char *argv[])
     }
     
     struct ms_mesh mesh = ms_file_obj_read_fast(argv[1]);
-    printf("[INFO] Loaded OBJ file with\n\t%d vertices\n\t%d quads\n\t%d indices\n", mesh.nverts, mesh.nfaces, mesh.nfaces * 4);
+    printf("[INFO] Loaded OBJ file with\n"
+           "\t%d unique vertices\n"
+           "\t%d quads"
+           "\n\t%d face vertices\n", mesh.nverts, mesh.nfaces, mesh.nfaces * 4);
     
     int iterations = atoi(argv[2]);
     int bench_itearitons = -1;
@@ -128,7 +131,7 @@ main(int argc, char *argv[])
         }
         
         printf("[TIME] avg: %.1f cycles/v\n", avg);
-        printf("[TIME] avg: %.1f ms per subdivision of %d vertex mesh\n", (usec_after - usec_before) / 1000.0f / bench_itearitons, mesh.nverts);
+        printf("[TIME] avg: %.1f ms per subdivision of %d vertex mesh\n", (usec_after - usec_before) / 1000.0f / bench_itearitons, mesh.nfaces * 4);
     }
     
     if (fortex) {

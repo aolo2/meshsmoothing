@@ -784,6 +784,16 @@ we know new_mesh.nverts ahead of time
 write new_verts_x/y/z , edge_pointsv_x/y/z, face_points_x/y/z straight to the final array
 
 
-
-
 HUGE WINS WITH repacking!!!
+- memory data volume 2x less!
+- CPI 0.55 even on 12MILLION vertices (cubic torus 8)
+- cache-misses 5x less!
+
+
+
+----
+MPI thoughts:
+- to ensure no communication (after startup) we need N+1-wide overlap for each patch ?????? (really?)
+- calculate each patch independently
+- stitch together. How do we work around floating point shenanigans?
+- remember original indices of neighbours????

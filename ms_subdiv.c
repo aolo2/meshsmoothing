@@ -3,10 +3,10 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    /* Construct acceleration structure */
-    
+    /* Renumber vertices for better locality */
     repack_mesh(mesh);
     
+    /* Construct acceleration structure */
     struct ms_edges accel = init_acceleration_struct(mesh);
     
     TracyCZoneN(alloc_new_mesh, "allocate", true);
@@ -158,10 +158,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         int edge_point_da = ep_base + edge_points[face * 4 + 3];
         
         int face_point = vert_base + face;
-        
-        if ((a | b | c | d | edge_point_ab | edge_point_bc | edge_point_cd | edge_point_da | face_point) < 0) {
-            __builtin_trap();
-        }
         
         /* Add faces */
         {

@@ -16,5 +16,9 @@ profile_fast:
 	@echo "[INFO] PROFILE build (tracy, fast)"
 	@+make -f build/profile.mk fast --no-print-directory
 
+mpi:
+	@echo "[INFO] MPI build (debug)"
+	@+make -f build/mpi.mk --no-print-directory
+
 .PHONY:
-	all debug release profile profile_fast
+	all debug release profile profile_fast mpi
