@@ -38,6 +38,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
     
     TracyCZoneN(compute_face_points, "face points", true);
     
+    //#pragma omp parallel for
     for (int face = 0; face < mesh->nfaces; ++face) {
         int v1 = mesh->faces[face * 4 + 0];
         int v2 = mesh->faces[face * 4 + 1];
@@ -58,6 +59,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
     
     TracyCZoneN(compute_edge_points, "edge_points", true);
     
+    //#pragma omp parallel for
     for (int e = 0; e < accel.count; ++e) {
         struct ms_edge edge = accel.edges[e];
         
@@ -76,6 +78,8 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
     TracyCZoneEnd(compute_edge_points);
     
     TracyCZoneN(update_positions, "update old points", true);
+    
+    //#pragma omp parallel for
     for (int v = 0; v < mesh->nverts; ++v) {
         f32 vertex_x = mesh->vertices_x[v];
         f32 vertex_y = mesh->vertices_y[v];
@@ -144,6 +148,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
     int vert_base = mesh->nverts + accel.count;
     int ep_base = mesh->nverts;
     
+    //#pragma omp parallel for
     for (int face = 0; face < mesh->nfaces; ++face) {
         int face_base = face * 16;
         

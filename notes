@@ -778,10 +778,10 @@ face_points_z[face] = had_128(zs) * 0.25f;
 
 
 
-TODO:
-remove copy unique points
+ideas:
+remove "copy unique points"
 we know new_mesh.nverts ahead of time
-write new_verts_x/y/z , edge_pointsv_x/y/z, face_points_x/y/z straight to the final array
+write new_verts_x/y/z , edge_pointsv_x/y/z, face_points_x/y/z straight to the final array ?
 
 
 HUGE WINS WITH repacking!!!
@@ -797,3 +797,10 @@ MPI thoughts:
 - calculate each patch independently
 - stitch together. How do we work around floating point shenanigans?
 - remember original indices of neighbours????
+
+
+
+More MPI thoughts (after implementation started):
+- divide vertices, then get all faces with these vertices. NO ADJACENCY INFORMATION NEEDED FOR FULL MESH THIS WAY
+- do not subdivide faces that have egdes "on the cut". (have vertices outside of coordinate section)
+- 

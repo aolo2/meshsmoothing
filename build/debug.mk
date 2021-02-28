@@ -1,7 +1,7 @@
 include build/build.mk
 
 BUILD_PATH = build/debug
-CFLAGS += -O0 -g # -fsanitize=address
+CFLAGS += -O0 -g -fsanitize=address
 
 all:
 	@mkdir -p $(BUILD_PATH)

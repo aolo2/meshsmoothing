@@ -3,6 +3,7 @@ external
 build/debug
 build/release
 build/profile
+build/mpi
 traces
 .gdb_history
 ds_bench.c

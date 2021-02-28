@@ -3,7 +3,7 @@ include build/build.mk
 CC = gcc
 BUILD_PATH = build/release
 
-CFLAGS += -march=native -O2 -g -DNDEBUG
+CFLAGS += -O2 -g -DNDEBUG
 
 all:
 	@mkdir -p $(BUILD_PATH)
