@@ -1,14 +1,9 @@
-#include <mpi.h>
-
-#define MASTER 0
-
 #include "ms_common.h"
 
 #include "ms_partition.c"
 #include "ms_system.c"
 #include "ms_subdiv_csr.c"
 #include "ms_subdiv.c"
-
 
 int
 main(int argc, char *argv[])
@@ -25,7 +20,7 @@ main(int argc, char *argv[])
     struct ms_mesh mesh = { 0 };
     int iterations = 0;
     
-    if (rank == 0) {
+    if (rank == MASTER) {
         if (argc != 3) {
             fprintf(stderr, "[ERROR] Usage: %s path/to/model.obj ITERATIONS\n", argv[0]);
             MPI_Abort(comm, 1);
@@ -44,10 +39,8 @@ main(int argc, char *argv[])
     
     iterations = atoi(argv[2]);
     
-    /* Each process needs [iterations + 1] (????) halo levels to independently subdivide for [iteration] steps */
     distribute_mesh_with_overlap(comm, rank, size, &mesh);
     
-#if 0
     if (mesh.nfaces > 0) {
         for (int i = 0; i < iterations; ++i) {
             struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(&mesh);
@@ -64,10 +57,9 @@ main(int argc, char *argv[])
     stitch_back_mesh(comm, rank, size, &mesh);
     
     char output_filename[512] = { 0 };
-    int len = snprintf(output_filename, 512, "%s_%d.obj", argv[1], iterations);
+    int len = snprintf(output_filename, 512, "%s_%d_proc%d.obj", argv[1], iterations, rank);
     output_filename[len] = 0;
     ms_file_obj_write_file(output_filename, mesh);
-#endif
     
     free(mesh.vertices_x);
     free(mesh.vertices_y);

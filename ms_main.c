@@ -12,6 +12,10 @@ main(int argc, char *argv[])
         return(1);
     }
     
+#if MT
+    omp_set_num_threads(6);
+#endif
+    
     struct ms_mesh mesh = ms_file_obj_read_fast(argv[1]);
     printf("[INFO] Loaded OBJ file with\n"
            "\t%d unique vertices\n"

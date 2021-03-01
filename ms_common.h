@@ -12,6 +12,10 @@
 #include <omp.h>
 #endif
 
+#ifdef MP
+#include <mpi.h>
+#endif
+
 #ifdef PROFILE
 #    include "external/tracy/TracyC.h"
 #else
@@ -24,6 +28,7 @@
 
 #define MAX_BENCH_ITERATIONS 1000
 #define SWAP(a, b) { typeof(a) tmp___ = (a); (a) = (b); (b) = tmp___; }
+#define MASTER 0
 
 typedef int64_t s64;
 typedef int32_t s32;

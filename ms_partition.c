@@ -67,8 +67,9 @@ vertices of face go to that process */
         
         for (int i = 0; i < nfaces; ++i) {
             int vertex = pp_faces[pp_offset + i];
+            int alias = pp_map[pp_voffset + vertex];
             /* We haven't got this vertex' coordinates yet */
-            if (pp_map[pp_voffset + vertex] == -1) {
+            if (alias == -1) {
                 int nverts = pp_nverts[p];
                 
                 f32 x = mesh->vertices_x[vertex];
@@ -76,12 +77,15 @@ vertices of face go to that process */
                 f32 z = mesh->vertices_z[vertex];
                 
                 pp_map[pp_voffset + vertex] = nverts;
+                pp_faces[pp_offset + i] = nverts;
                 
                 pp_verts_x[pp_voffset + nverts] = x;
                 pp_verts_y[pp_voffset + nverts] = y;
                 pp_verts_z[pp_voffset + nverts] = z;
                 
                 ++pp_nverts[p];
+            } else {
+                pp_faces[pp_offset + i] = alias;
             }
         }
     }
@@ -160,8 +164,8 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
     MPI_Scatterv(pp_faces, pp_nfaces, pp_displs, MPI_INT, faces, faces_count, MPI_INT, MASTER, comm);
     
     mesh->nfaces = faces_count / 4;
-    mesh->faces = faces;
     mesh->nverts = vertices_count;
+    mesh->faces = faces;
     mesh->vertices_x = vertices_x;
     mesh->vertices_y = vertices_y;
     mesh->vertices_z = vertices_z;
@@ -184,4 +188,8 @@ static void
 stitch_back_mesh(MPI_Comm comm, int rank, int size, struct ms_mesh *mesh)
 {
     /* TODO */
+    (void)  comm;
+    (void)  rank;
+    (void)  size;
+    (void) *mesh;
 }

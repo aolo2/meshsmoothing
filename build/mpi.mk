@@ -4,7 +4,7 @@ CC = mpicc
 BUILD_PATH = build/mpi
 
 FILES = ms_mpi_main.c
-CFLAGS += -O0 -g -Wno-unused-function  -fsanitize=address
+CFLAGS += -DMP -O0 -g -Wno-unused-function # -fsanitize=address
 
 all:
 	@mkdir -p $(BUILD_PATH)
