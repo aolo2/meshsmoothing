@@ -41,6 +41,7 @@ main(int argc, char *argv[])
     
     distribute_mesh_with_overlap(comm, rank, size, &mesh);
     
+#if 0
     if (mesh.nfaces > 0) {
         for (int i = 0; i < iterations; ++i) {
             struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(&mesh);
@@ -53,6 +54,7 @@ main(int argc, char *argv[])
             mesh = new_mesh;
         }
     }
+#endif
     
     stitch_back_mesh(comm, rank, size, &mesh);
     

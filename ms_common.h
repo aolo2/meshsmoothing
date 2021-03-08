@@ -71,8 +71,4 @@ struct ms_mesh {
 struct ms_edges {
     struct ms_edge *edges;
     int count;
-    
-    int *verts_starts;
-    int *faces_matrix;
-    int *verts_matrix;
 };
