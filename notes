@@ -789,6 +789,8 @@ HUGE WINS WITH repacking!!!
 - CPI 0.55 even on 12MILLION vertices (cubic torus 8)
 - cache-misses 5x less!
 
+[TIME] avg: 104.7 cycles/v
+[TIME] avg: 105.7 ms per subdivision of 3145728 vertex mesh
 
 
 ----
@@ -804,3 +806,18 @@ More MPI thoughts (after implementation started):
 - divide vertices, then get all faces with these vertices. NO ADJACENCY INFORMATION NEEDED FOR FULL MESH THIS WAY
 - do not subdivide faces that have egdes "on the cut". (have vertices outside of coordinate section)
 - 
+
+
+remove adjacency info, use faces directly to accumulate averages:
+[TIME] avg: 91.9 cycles/v
+[TIME] avg: 92.1 ms per subdivision of 3145728 vertex mesh
+
+
+
+Add holes back.......
+[TIME] avg: 146.3 cycles/v
+[TIME] avg: 146.7 ms per subdivision of 3145728 vertex mesh
+
+:(((((((
+
+this effect is MOSTLY because of more memory used during init_acceleration struct (and compacting it later)

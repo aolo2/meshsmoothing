@@ -30,6 +30,10 @@
 #define SWAP(a, b) { typeof(a) tmp___ = (a); (a) = (b); (b) = tmp___; }
 #define MASTER 0
 
+#ifndef MIN 
+#    define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 typedef int64_t s64;
 typedef int32_t s32;
 typedef int16_t s16;
@@ -66,6 +70,14 @@ struct ms_mesh {
     int *faces;
     int nverts;
     int nfaces;
+};
+
+struct ms_vertex {
+    f32 fpx, fpy, fpz;
+    f32 mex, mey, mez;
+    f32 smex, smey, smez;
+    int nfaces;
+    int nedges;
 };
 
 struct ms_edges {

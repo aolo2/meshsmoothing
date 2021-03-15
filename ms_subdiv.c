@@ -1,10 +1,3 @@
-struct pv_tmp {
-    f32 fpx, fpy, fpz;
-    f32 mex, mey, mez;
-    int nfaces;
-    int nedges;
-};
-
 static struct ms_mesh
 ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
 {
@@ -30,7 +23,7 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
     int *edge_points    = malloc64(mesh->nfaces * 4 * sizeof(int));
     
     /* Update points */
-    struct pv_tmp *pv = calloc64(mesh->nverts * sizeof(struct pv_tmp));
+    struct ms_vertex *pv = calloc64(mesh->nverts * sizeof(struct ms_vertex));
     
     f32 *new_verts_x = malloc64(mesh->nverts * sizeof(f32));
     f32 *new_verts_y = malloc64(mesh->nverts * sizeof(f32));
@@ -77,9 +70,26 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         int start = edge.start;
         int end   = edge.end;
         
-        edge_pointsv_x[e] = (face_points_x[face] + face_points_x[adj] + mesh->vertices_x[start] + mesh->vertices_x[end]) * 0.25f;
-        edge_pointsv_y[e] = (face_points_y[face] + face_points_y[adj] + mesh->vertices_y[start] + mesh->vertices_y[end]) * 0.25f;
-        edge_pointsv_z[e] = (face_points_z[face] + face_points_z[adj] + mesh->vertices_z[start] + mesh->vertices_z[end]) * 0.25f;
+        pv[start].nedges += 1;
+        pv[end].nedges += 1;
+        
+        if (face != adj) {
+            edge_pointsv_x[e] = (face_points_x[face] + face_points_x[adj] + mesh->vertices_x[start] + mesh->vertices_x[end]) * 0.25f;
+            edge_pointsv_y[e] = (face_points_y[face] + face_points_y[adj] + mesh->vertices_y[start] + mesh->vertices_y[end]) * 0.25f;
+            edge_pointsv_z[e] = (face_points_z[face] + face_points_z[adj] + mesh->vertices_z[start] + mesh->vertices_z[end]) * 0.25f;
+        } else {
+            edge_pointsv_x[e] = (mesh->vertices_x[start] + mesh->vertices_x[end]) * 0.5f;
+            edge_pointsv_y[e] = (mesh->vertices_y[start] + mesh->vertices_y[end]) * 0.5f;
+            edge_pointsv_z[e] = (mesh->vertices_z[start] + mesh->vertices_z[end]) * 0.5f;
+            
+            pv[start].smex += edge_pointsv_x[e];
+            pv[start].smey += edge_pointsv_y[e];
+            pv[start].smez += edge_pointsv_z[e];
+            
+            pv[end].smex += edge_pointsv_x[e];
+            pv[end].smey += edge_pointsv_y[e];
+            pv[end].smez += edge_pointsv_z[e];
+        }
         
         edge_points[face * 4 + edge.findex_1] = e;
         edge_points[adj  * 4 + edge.findex_2] = e;
@@ -143,7 +153,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         pv[v1].mez += mez12;
         
         pv[v1].nfaces += 1;
-        pv[v1].nedges += 2;
         
         /* v2 */
         pv[v2].fpx += fx;
@@ -159,7 +168,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         pv[v2].mez += mez23;
         
         pv[v2].nfaces += 1;
-        pv[v2].nedges += 2;
         
         /* v3 */
         pv[v3].fpx += fx;
@@ -175,7 +183,6 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         pv[v3].mez += mez34;
         
         pv[v3].nfaces += 1;
-        pv[v3].nedges += 2;
         
         /* v4 */
         pv[v4].fpx += fx;
@@ -191,29 +198,35 @@ ms_subdiv_catmull_clark_new(struct ms_mesh *mesh)
         pv[v4].mez += mez41;
         
         pv[v4].nfaces += 1;
-        pv[v4].nedges += 2;
     }
     TracyCZoneEnd(average_compute);
     
-    
     TracyCZoneN(update_positions, "update old points", true);
     for (int v = 0; v < mesh->nverts; ++v) {
-        struct pv_tmp pvv = pv[v];
+        struct ms_vertex pvv = pv[v];
         
         f32 norm_coeff = 1.0f / pvv.nfaces;
+        f32 norm_coeff2 = 0.5f / pvv.nedges;
+        
         f32 vertex_x = mesh->vertices_x[v];
         f32 vertex_y = mesh->vertices_y[v];
         f32 vertex_z = mesh->vertices_z[v];
         
-        /* Weights */
-        f32 w1 = (pvv.nfaces - 3.0f) * norm_coeff;
-        f32 w2 = norm_coeff * norm_coeff;
-        f32 w3 = w2;
-        
-        /* Weighted average to obtain a new vertex */
-        new_verts_x[v] = w1 * vertex_x + w2 * pvv.fpx + w3 * pvv.mex;
-        new_verts_y[v] = w1 * vertex_y + w2 * pvv.fpy + w3 * pvv.mey;
-        new_verts_z[v] = w1 * vertex_z + w2 * pvv.fpz + w3 * pvv.mez;
+        if (pvv.nfaces == pvv.nedges) {
+            /* Weights */
+            f32 w1 = pvv.nfaces - 3.0f;
+            f32 w2 = 1.0f;
+            f32 w3 = 2.0f;
+            
+            /* Weighted average to obtain a new vertex */
+            new_verts_x[v] = norm_coeff * (w1 * vertex_x + w2 * pvv.fpx * norm_coeff + w3 * pvv.mex * norm_coeff2);
+            new_verts_y[v] = norm_coeff * (w1 * vertex_y + w2 * pvv.fpy * norm_coeff + w3 * pvv.mey * norm_coeff2);
+            new_verts_z[v] = norm_coeff * (w1 * vertex_z + w2 * pvv.fpz * norm_coeff + w3 * pvv.mez * norm_coeff2);
+        } else {
+            new_verts_x[v] = (pvv.smex + vertex_x) / 3.0f;
+            new_verts_y[v] = (pvv.smey + vertex_y) / 3.0f;
+            new_verts_z[v] = (pvv.smez + vertex_z) / 3.0f;
+        }
     }
     
     TracyCZoneEnd(update_positions);
