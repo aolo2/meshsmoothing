@@ -69,10 +69,10 @@ start < end guarantees that an edge will be added
 start > end means that an edge COULD be added
  */
         
-        offsets[MIN(v1, v2) + 1]++; 
-        offsets[MIN(v2, v3) + 1]++; 
-        offsets[MIN(v3, v4) + 1]++; 
-        offsets[MIN(v4, v1) + 1]++; 
+        offsets[MIN(v1, v2) + 1]++;
+        offsets[MIN(v2, v3) + 1]++;
+        offsets[MIN(v3, v4) + 1]++;
+        offsets[MIN(v4, v1) + 1]++;
     }
     
     TracyCZoneEnd(count);

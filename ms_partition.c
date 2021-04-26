@@ -1,3 +1,5 @@
+#define FF(__a) do { for (int p = 0; p < size; ++p) printf("%d\n", __a[p]); } while (0)
+
 /* 
 * For now:
 *     - quad faces only
@@ -7,7 +9,7 @@
 */
 static void
 coordinate_cut(int size, struct ms_mesh *mesh, int *map, int *pp_faces, int *pp_nfaces, int *pp_displs,
-               f32 *pp_verts_x, f32 *pp_verts_y, f32 *pp_verts_z, int *pp_nverts, int *pp_vdispls, int *pp_map)
+               f32 *pp_verts_x, f32 *pp_verts_y, f32 *pp_verts_z, int *pp_nverts, int *pp_vdispls, int *pp_map, int *pp_halo)
 {
     f32 min_x = mesh->vertices_x[0];
     f32 max_x = min_x;
@@ -38,19 +40,33 @@ coordinate_cut(int size, struct ms_mesh *mesh, int *map, int *pp_faces, int *pp_
         int p3 = map[v3];
         int p4 = map[v4];
         
-        /* If at least one vertex of face belongs to process, then all
-vertices of face go to that process */
         for (int p = 0; p < size; ++p) {
             int pp_offset = p * mesh->nverts * 4;
+            int nfaces = pp_nfaces[p];
+            
+            /* If at least one vertex of face belongs to process, then all
+vertices of face go to that process */
             if (p == p1 || p == p2 || p == p3 || p == p4) {
-                int nfaces = pp_nfaces[p];
-                
                 pp_faces[pp_offset + nfaces + 0] = v1;
                 pp_faces[pp_offset + nfaces + 1] = v2;
                 pp_faces[pp_offset + nfaces + 2] = v3;
                 pp_faces[pp_offset + nfaces + 3] = v4;
                 
                 pp_nfaces[p] += 4;
+            }
+            
+            /* If at least one vertex of face DOES NOT belong to process, then
+this is a HALO face */
+            if (p != p1 || p != p2 || p != p3 || p != p4) {
+                pp_halo[pp_offset + nfaces + 0] = 1;
+                pp_halo[pp_offset + nfaces + 1] = 1;
+                pp_halo[pp_offset + nfaces + 2] = 1;
+                pp_halo[pp_offset + nfaces + 3] = 1;
+            } else {
+                pp_halo[pp_offset + nfaces + 0] = 0;
+                pp_halo[pp_offset + nfaces + 1] = 0;
+                pp_halo[pp_offset + nfaces + 2] = 0;
+                pp_halo[pp_offset + nfaces + 3] = 0;
             }
         }
     }
@@ -110,6 +126,7 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
     int *pp_faces = NULL;
     int *pp_nfaces = NULL;
     int *pp_displs = NULL;
+    int *pp_halo = NULL;
     
     int *pp_nverts = NULL;
     f32 *pp_verts_x = NULL;
@@ -122,6 +139,7 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
         /* Worst case allocation: each vertex is in a separate face. All faces in one array for
  simplicity of MPI_Send and malloc/free */
         pp_faces = malloc(mesh->nverts * 4 * size * sizeof(int));
+        pp_halo = malloc(mesh->nverts * 4 * size * sizeof(int));
         pp_nfaces = malloc(size * sizeof(int));
         pp_displs = malloc(size * sizeof(int));
         
@@ -138,7 +156,7 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
         memset(pp_map, -1, mesh->nverts * size * sizeof(int));
         
         coordinate_cut(size, mesh, map, pp_faces, pp_nfaces, pp_displs,
-                       pp_verts_x, pp_verts_y, pp_verts_z, pp_nverts, pp_vdispls, pp_map);
+                       pp_verts_x, pp_verts_y, pp_verts_z, pp_nverts, pp_vdispls, pp_map, pp_halo);
     }
     
     /* Scatter vertices */
@@ -158,10 +176,29 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
     /* Scatter faces */
     int faces_count = 0;
     int *faces  = NULL;
+    int *halo = NULL;
     
     MPI_Scatter(pp_nfaces, 1, MPI_INT, &faces_count, 1, MPI_INT, MASTER, comm);
+    
     faces = malloc(faces_count * sizeof(int));
+    halo  = malloc(faces_count * sizeof(int));
+    
     MPI_Scatterv(pp_faces, pp_nfaces, pp_displs, MPI_INT, faces, faces_count, MPI_INT, MASTER, comm);
+    MPI_Scatterv(pp_halo,  pp_nfaces, pp_displs, MPI_INT, halo,  faces_count, MPI_INT, MASTER, comm);
+    
+#if 0
+    for (int p = 0; p < size; ++p) {
+        int displ = pp_displs[p];
+        int count = pp_nfaces[p];
+        
+        printf("%d: ", p);
+        for (int h = displ; h < displ + count; ++h) {
+            printf("%d ", pp_halo[h]);
+        }
+        printf("\n\n");
+    }
+    
+#endif
     
     mesh->nfaces = faces_count / 4;
     mesh->nverts = vertices_count;
@@ -169,10 +206,12 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
     mesh->vertices_x = vertices_x;
     mesh->vertices_y = vertices_y;
     mesh->vertices_z = vertices_z;
+    mesh->halo = halo;
     
     if (rank == MASTER) {
         free(pp_nfaces);
         free(pp_faces);
+        free(pp_halo);
         free(pp_displs);
         free(pp_nverts);
         free(pp_verts_x);
@@ -184,12 +223,90 @@ distribute_mesh_with_overlap(MPI_Comm comm, int rank, int size, struct ms_mesh *
     }
 }
 
+/*
+* 1. Everyone sends their subdivided mesh to master
+*
+*/
 static void
 stitch_back_mesh(MPI_Comm comm, int rank, int size, struct ms_mesh *mesh)
 {
-    /* TODO */
-    (void)  comm;
-    (void)  rank;
-    (void)  size;
-    (void) *mesh;
+    int *verts_counts = NULL;
+    int *faces_counts = NULL;
+    
+    int *faces_displs = NULL;
+    int *verts_displs = NULL;
+    
+    int *faces = NULL;
+    f32 *vertices_x = NULL;
+    f32 *vertices_y = NULL;
+    f32 *vertices_z = NULL;
+    
+    if (rank == MASTER) {
+        verts_counts = malloc(size * sizeof(int));
+        faces_counts = malloc(size * sizeof(int));
+        faces_displs = malloc(size * sizeof(int));
+        verts_displs = malloc(size * sizeof(int));
+    }
+    
+    MPI_Gather(&mesh->nverts, 1, MPI_INT, verts_counts, 1, MPI_INT, MASTER, comm);
+    MPI_Gather(&mesh->nfaces, 1, MPI_INT, faces_counts, 1, MPI_INT, MASTER, comm);
+    
+    int total_nverts = 0;
+    int total_nfaces = 0;
+    
+    if (rank == MASTER) {
+        for (int p = 0; p < size; ++p) {
+            faces_counts[p] *= 4;
+        }
+        
+        for (int p = 0; p < size; ++p) {
+            verts_displs[p] = total_nverts;
+            faces_displs[p] = total_nfaces;
+            
+            total_nverts += verts_counts[p];
+            total_nfaces += faces_counts[p];
+        }
+        
+        faces = malloc(total_nfaces * sizeof(int));
+        vertices_x = malloc(total_nverts * sizeof(f32));
+        vertices_y = malloc(total_nverts * sizeof(f32));
+        vertices_z = malloc(total_nverts * sizeof(f32));
+    }
+    
+    if (rank == MASTER) {
+        //FF(verts_counts);
+        //FF(verts_displs);
+    }
+    
+    MPI_Gatherv(mesh->faces, mesh->nfaces * 4, MPI_INT, faces, faces_counts, faces_displs, MPI_INT, MASTER, comm);
+    MPI_Gatherv(mesh->vertices_x, mesh->nverts, MPI_FLOAT, vertices_x, verts_counts, verts_displs, MPI_FLOAT, MASTER, comm);
+    MPI_Gatherv(mesh->vertices_y, mesh->nverts, MPI_FLOAT, vertices_y, verts_counts, verts_displs, MPI_FLOAT, MASTER, comm);
+    MPI_Gatherv(mesh->vertices_z, mesh->nverts, MPI_FLOAT, vertices_z, verts_counts, verts_displs, MPI_FLOAT, MASTER, comm);
+    
+    if (rank == MASTER) {
+        assert(total_nfaces % 4 == 0);
+        
+        for (int p = 1; p < size; ++p) {
+            int displ = faces_displs[p];
+            int count = faces_counts[p];
+            
+            for (int f = displ; f < displ + count; ++f) {
+                faces[f] += verts_displs[p];
+            }
+        }
+        
+        mesh->nfaces = total_nfaces / 4;
+        mesh->nverts = total_nverts;
+        mesh->faces = faces;
+        mesh->vertices_x = vertices_x;
+        mesh->vertices_y = vertices_y;
+        mesh->vertices_z = vertices_z;
+        
+#if 0
+        for (int i = 0; i < mesh->nfaces; ++i) {
+            printf("%d ", mesh->faces[i]);
+        }
+        printf("\n");
+#endif
+    }
 }

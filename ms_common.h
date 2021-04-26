@@ -70,6 +70,8 @@ struct ms_mesh {
     int *faces;
     int nverts;
     int nfaces;
+    
+    int *halo;
 };
 
 struct ms_vertex {

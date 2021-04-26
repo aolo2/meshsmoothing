@@ -3,7 +3,7 @@
 #include "ms_partition.c"
 #include "ms_system.c"
 #include "ms_subdiv_csr.c"
-#include "ms_subdiv.c"
+#include "ms_subdiv_mpi.c"
 
 int
 main(int argc, char *argv[])
@@ -41,10 +41,9 @@ main(int argc, char *argv[])
     
     distribute_mesh_with_overlap(comm, rank, size, &mesh);
     
-#if 0
     if (mesh.nfaces > 0) {
         for (int i = 0; i < iterations; ++i) {
-            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_new(&mesh);
+            struct ms_mesh new_mesh = ms_subdiv_catmull_clark_tagged(&mesh);
             
             free(mesh.vertices_x);
             free(mesh.vertices_y);
@@ -54,14 +53,23 @@ main(int argc, char *argv[])
             mesh = new_mesh;
         }
     }
+    
+#if 0
+    char output_filename_1[512] = { 0 };
+    int len = snprintf(output_filename_1, 512, "%s_%d_PIECE_%d.obj", argv[1], iterations, rank);
+    output_filename_1[len] = 0;
+    ms_file_obj_write_file(output_filename_1, mesh);
 #endif
     
     stitch_back_mesh(comm, rank, size, &mesh);
     
-    char output_filename[512] = { 0 };
-    int len = snprintf(output_filename, 512, "%s_%d_proc%d.obj", argv[1], iterations, rank);
-    output_filename[len] = 0;
-    ms_file_obj_write_file(output_filename, mesh);
+    if (rank == MASTER) {
+        char output_filename[512] = { 0 };
+        int len = snprintf(output_filename, 512, "%s_%d_MASTER.obj", argv[1], iterations);
+        output_filename[len] = 0;
+        ms_file_obj_write_file(output_filename, mesh);
+    }
+    
     
     free(mesh.vertices_x);
     free(mesh.vertices_y);
