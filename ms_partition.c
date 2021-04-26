@@ -55,25 +55,26 @@ vertices of face go to that process */
                 pp_nfaces[p] += 4;
             }
             
-            /* If at least one vertex of face DOES NOT belong to process, then
-this is a HALO face */
-            if (p != p1 || p != p2 || p != p3 || p != p4) {
-                pp_halo[pp_offset + nfaces + 0] = 1;
-                pp_halo[pp_offset + nfaces + 1] = 1;
-                pp_halo[pp_offset + nfaces + 2] = 1;
-                pp_halo[pp_offset + nfaces + 3] = 1;
-            } else {
-                pp_halo[pp_offset + nfaces + 0] = 0;
-                pp_halo[pp_offset + nfaces + 1] = 0;
-                pp_halo[pp_offset + nfaces + 2] = 0;
-                pp_halo[pp_offset + nfaces + 3] = 0;
-            }
+#if 1
+            pp_halo[pp_offset + v1] = (p == p1 ? 0 : 1);
+            pp_halo[pp_offset + v2] = (p == p2 ? 0 : 1);
+            pp_halo[pp_offset + v3] = (p == p3 ? 0 : 1);
+            pp_halo[pp_offset + v4] = (p == p4 ? 0 : 1);
+#else
+            pp_halo[pp_offset + v1] = 0;
+            pp_halo[pp_offset + v2] = 0;
+            pp_halo[pp_offset + v3] = 0;
+            pp_halo[pp_offset + v4] = 0;
+#endif
         }
     }
     
     for (int p = 0; p < size; ++p) {
         pp_displs[p] = p * mesh->nverts * 4;
     }
+    
+    int *pp_halo2 = malloc(mesh->nverts * 4 * size * sizeof(int));
+    memcpy(pp_halo2, pp_halo, mesh->nverts * 4 * size * sizeof(int));
     
     /* 2-in-1 special! Get actual vertex coordinates, and also re-number the vertices */
     for (int p = 0; p < size; ++p) {
@@ -99,6 +100,8 @@ this is a HALO face */
                 pp_verts_y[pp_voffset + nverts] = y;
                 pp_verts_z[pp_voffset + nverts] = z;
                 
+                pp_halo[pp_offset + nverts] = pp_halo2[pp_offset + vertex];
+                
                 ++pp_nverts[p];
             } else {
                 pp_faces[pp_offset + i] = alias;
@@ -109,6 +112,8 @@ this is a HALO face */
     for (int p = 0; p < size; ++p) {
         pp_vdispls[p] = p * mesh->nverts;
     }
+    
+    free(pp_halo2);
 }
 
 static void

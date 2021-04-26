@@ -3,9 +3,6 @@ ms_subdiv_catmull_clark_tagged(struct ms_mesh *mesh)
 {
     TracyCZone(__FUNC__, true);
     
-    /* Renumber vertices for better locality */
-    repack_mesh(mesh);
-    
     /* Construct acceleration structure */
     struct ms_edges accel = init_acceleration_struct(mesh);
     
@@ -261,11 +258,6 @@ ms_subdiv_catmull_clark_tagged(struct ms_mesh *mesh)
     
     //#pragma omp parallel for
     for (int face = 0; face < mesh->nfaces; ++face) {
-        int face_is_halo = mesh->halo[face * 4];
-        if (face_is_halo) {
-            continue;
-        }
-        
         int a = mesh->faces[face * 4 + 0];
         int b = mesh->faces[face * 4 + 1];
         int c = mesh->faces[face * 4 + 2];
@@ -281,32 +273,49 @@ ms_subdiv_catmull_clark_tagged(struct ms_mesh *mesh)
         /* Add faces */
         {
             /* face 0 */
-            new_mesh.faces[face_base + 0] = a;
-            new_mesh.faces[face_base + 1] = edge_point_ab;
-            new_mesh.faces[face_base + 2] = face_point;
-            new_mesh.faces[face_base + 3] = edge_point_da;
+            if (!mesh->halo[a]) {
+                new_mesh.faces[face_base + 0] = a;
+                new_mesh.faces[face_base + 1] = edge_point_ab;
+                new_mesh.faces[face_base + 2] = face_point;
+                new_mesh.faces[face_base + 3] = edge_point_da;
+                
+                face_base += 4;
+                new_mesh.nfaces += 1;
+            }
             
             /* face 1 */
-            new_mesh.faces[face_base + 4] = b;
-            new_mesh.faces[face_base + 5] = edge_point_bc;
-            new_mesh.faces[face_base + 6] = face_point;
-            new_mesh.faces[face_base + 7] = edge_point_ab;
+            if (!mesh->halo[b]) {
+                new_mesh.faces[face_base + 0] = b;
+                new_mesh.faces[face_base + 1] = edge_point_bc;
+                new_mesh.faces[face_base + 2] = face_point;
+                new_mesh.faces[face_base + 3] = edge_point_ab;
+                
+                face_base += 4;
+                new_mesh.nfaces += 1;
+            }
             
             /* face 2 */
-            new_mesh.faces[face_base + 8] = c;
-            new_mesh.faces[face_base + 9] = edge_point_cd;
-            new_mesh.faces[face_base + 10] = face_point;
-            new_mesh.faces[face_base + 11] = edge_point_bc;
+            if (!mesh->halo[c]) {
+                new_mesh.faces[face_base + 0] = c;
+                new_mesh.faces[face_base + 1] = edge_point_cd;
+                new_mesh.faces[face_base + 2] = face_point;
+                new_mesh.faces[face_base + 3] = edge_point_bc;
+                
+                face_base += 4;
+                new_mesh.nfaces += 1;
+            }
             
             /* face 3 */
-            new_mesh.faces[face_base + 12] = d;
-            new_mesh.faces[face_base + 13] = edge_point_da;
-            new_mesh.faces[face_base + 14] = face_point;
-            new_mesh.faces[face_base + 15] = edge_point_cd;
+            if (!mesh->halo[d]) {
+                new_mesh.faces[face_base + 0] = d;
+                new_mesh.faces[face_base + 1] = edge_point_da;
+                new_mesh.faces[face_base + 2] = face_point;
+                new_mesh.faces[face_base + 3] = edge_point_cd;
+                
+                face_base += 4;
+                new_mesh.nfaces += 1;
+            }
         }
-        
-        face_base += 16;
-        new_mesh.nfaces += 4;
     }
     TracyCZoneEnd(subdivide);
     

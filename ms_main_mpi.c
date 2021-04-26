@@ -54,7 +54,7 @@ main(int argc, char *argv[])
         }
     }
     
-#if 0
+#if 1
     char output_filename_1[512] = { 0 };
     int len = snprintf(output_filename_1, 512, "%s_%d_PIECE_%d.obj", argv[1], iterations, rank);
     output_filename_1[len] = 0;
